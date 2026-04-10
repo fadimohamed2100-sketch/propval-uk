@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; color: #1a1a2e; background: #fff; }
+
+  /* Page layout */
+  @page { size: A4; margin: 20mm 18mm 20mm 18mm; }
+
+  .header { display: flex; justify-content: space-between; align-items: flex-end;
+            border-bottom: 3px solid #1a1a2e; padding-bottom: 12px; margin-bottom: 24px; }
+  .brand { font-size: 20pt; font-weight: 700; color: #1a1a2e; letter-spacing: -0.5px; }
+  .brand span { color: #4f46e5; }
+  .report-meta { text-align: right; font-size: 8.5pt; color: #555; line-height: 1.6; }
+
+  h2 { font-size: 13pt; font-weight: 700; color: #1a1a2e; margin-bottom: 10px;
+       padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
+
+  /* Subject property block */
+  .property-block { background: #f8f7ff; border-left: 4px solid #4f46e5;
+                    padding: 14px 16px; margin-bottom: 24px; border-radius: 0 6px 6px 0; }
+  .property-block .address { font-size: 14pt; font-weight: 700; color: #1a1a2e; }
+  .property-block .sub { font-size: 9.5pt; color: #6b7280; margin-top: 3px; }
+
+  /* Attribute grid */
+  .attrs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 24px; }
+  .attr { background: #f3f4f6; padding: 10px 12px; border-radius: 6px; }
+  .attr .label { font-size: 8pt; color: #6b7280; text-transform: uppercase;
+                 letter-spacing: 0.4px; margin-bottom: 3px; }
+  .attr .value { font-size: 11.5pt; font-weight: 600; color: #1a1a2e; }
+
+  /* Valuation hero */
+  .val-hero { background: #1a1a2e; color: #fff; padding: 20px 22px; border-radius: 8px;
+              margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+  .val-hero .centre { text-align: center; flex: 1; }
+  .val-hero .label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px;
+                     color: #a5b4fc; margin-bottom: 4px; }
+  .val-hero .figure { font-size: 26pt; font-weight: 700; color: #fff; }
+  .val-hero .range { font-size: 9pt; color: #c7d2fe; margin-top: 3px; }
+  .val-hero .side { text-align: center; }
+  .val-hero .side .figure { font-size: 17pt; }
+
+  /* Confidence bar */
+  .confidence-row { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .conf-bar { flex: 1; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+  .conf-fill { height: 100%; background: #4f46e5; border-radius: 4px; }
+  .conf-label { font-size: 9pt; color: #374151; white-space: nowrap; }
+
+  /* Comparables table */
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 24px; }
+  thead tr { background: #1a1a2e; color: #fff; }
+  thead th { padding: 8px 10px; text-align: left; font-weight: 600; font-size: 8.5pt;
+             letter-spacing: 0.3px; }
+  tbody tr:nth-child(even) { background: #f9fafb; }
+  tbody td { padding: 7px 10px; color: #374151; border-bottom: 1px solid #e5e7eb; }
+
+  /* Rental section */
+  .rental-row { display: flex; gap: 12px; margin-bottom: 24px; }
+  .rental-card { flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0;
+                 padding: 12px 14px; border-radius: 8px; }
+  .rental-card .label { font-size: 8pt; color: #15803d; text-transform: uppercase;
+                        letter-spacing: 0.4px; margin-bottom: 4px; }
+  .rental-card .value { font-size: 16pt; font-weight: 700; color: #14532d; }
+
+  /* Disclaimer */
+  .disclaimer { font-size: 7.5pt; color: #9ca3af; line-height: 1.5;
+                border-top: 1px solid #e5e7eb; padding-top: 10px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">Prop<span>Val</span></div>
+  <div class="report-meta">
+    Valuation Report<br>
+    {{ report_date }}<br>
+    Ref: {{ valuation_id[:8].upper() }}
+  </div>
+</div>
+
+<!-- Subject address -->
+<div class="property-block">
+  <div class="address">{{ address_line_1 }}{% if address_line_2 %}, {{ address_line_2 }}{% endif %}</div>
+  <div class="sub">{{ city }}  ·  {{ postcode }}</div>
+</div>
+
+<!-- Property attributes -->
+<h2>Property details</h2>
+<div class="attrs">
+  <div class="attr"><div class="label">Type</div><div class="value">{{ property_type }}</div></div>
+  <div class="attr"><div class="label">Bedrooms</div><div class="value">{{ bedrooms or 'N/A' }}</div></div>
+  <div class="attr"><div class="label">Bathrooms</div><div class="value">{{ bathrooms or 'N/A' }}</div></div>
+  <div class="attr"><div class="label">Floor area</div><div class="value">{{ floor_area_m2 or 'N/A' }} m²</div></div>
+  <div class="attr"><div class="label">EPC rating</div><div class="value">{{ epc_rating }}</div></div>
+  <div class="attr"><div class="label">Tenure</div><div class="value">{{ tenure }}</div></div>
+</div>
+
+<!-- Valuation hero -->
+<h2>Estimated market value</h2>
+<div class="val-hero">
+  <div class="side">
+    <div class="label">Range low</div>
+    <div class="figure">{{ range_low }}</div>
+  </div>
+  <div class="centre">
+    <div class="label">Point estimate</div>
+    <div class="figure">{{ estimated_value }}</div>
+    <div class="range">{{ range_low }} – {{ range_high }}</div>
+  </div>
+  <div class="side">
+    <div class="label">Range high</div>
+    <div class="figure">{{ range_high }}</div>
+  </div>
+</div>
+
+<!-- Confidence -->
+<div class="confidence-row">
+  <span class="conf-label">Confidence: {{ confidence_score }}</span>
+  <div class="conf-bar">
+    <div class="conf-fill" style="width: {{ confidence_score }};"></div>
+  </div>
+</div>
+
+<!-- Rental estimate -->
+<h2>Rental estimate</h2>
+<div class="rental-row">
+  <div class="rental-card">
+    <div class="label">Est. monthly rent</div>
+    <div class="value">{{ rental_monthly }}</div>
+  </div>
+  <div class="rental-card">
+    <div class="label">Gross rental yield</div>
+    <div class="value">{{ rental_yield }}</div>
+  </div>
+</div>
+
+<!-- Comparables -->
+{% if comparables %}
+<h2>Comparable sales</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Address</th>
+      <th>Type</th>
+      <th>Beds</th>
+      <th>Sale price</th>
+      <th>Date</th>
+      <th>Distance</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in comparables %}
+    <tr>
+      <td>{{ c.address }}</td>
+      <td>{{ c.property_type or '—' }}</td>
+      <td>{{ c.bedrooms or '—' }}</td>
+      <td>{{ c.sale_price }}</td>
+      <td>{{ c.sale_date }}</td>
+      <td>{% if c.distance_m %}{{ c.distance_m }}m{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<div class="disclaimer">
+  This report is generated automatically using publicly available data including HM Land Registry
+  Price Paid data and EPC certificates. It is provided for informational purposes only and does
+  not constitute a RICS-compliant valuation or financial advice. PropVal accepts no liability for
+  decisions made on the basis of this report. Always seek advice from a qualified surveyor for
+  mortgage or transaction purposes.
+</div>
+
+</body>
+</html>

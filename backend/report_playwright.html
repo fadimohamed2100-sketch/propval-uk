@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Property Valuation — {{ property.address1 }}, {{ property.postcode }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & base ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --header-bg:   #2B1649;
+  --header-line: #7C3AED;
+  --purple:      #4B2590;
+  --orange:      #E8522A;
+  --footer-bg:   #4B2590;
+  --page-bg:     #EBEBEB;
+  --card-border: #E0E0E0;
+  --text-muted:  #666666;
+  --text-body:   #333333;
+}
+
+html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; font-size: 11pt; color: var(--text-body); }
+
+/* ── Page setup ────────────────────────────────────────────── */
+@page { size: A4; margin: 0; }
+@media print {
+  body { background: white; }
+  .page { box-shadow: none; }
+}
+
+.page {
+  width: 794px;
+  min-height: 1123px;
+  background: var(--page-bg);
+  margin: 0 auto 24px;
+  display: flex;
+  flex-direction: column;
+  page-break-after: always;
+  break-after: page;
+  overflow: hidden;
+}
+.page:last-child { page-break-after: avoid; break-after: auto; }
+
+.page-inner { flex: 1; padding: 36px 36px 28px; display: flex; flex-direction: column; }
+
+/* ── Cards ─────────────────────────────────────────────────── */
+.card {
+  background: white;
+  border: 1px solid var(--card-border);
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+/* ── Section headers ───────────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+  margin-top: 4px;
+}
+.section-header-box {
+  background: var(--header-bg);
+  color: white;
+  font-size: 9.5pt;
+  font-weight: 700;
+  padding: 5px 12px;
+  white-space: nowrap;
+  letter-spacing: .02em;
+}
+.section-header-line { flex: 1; height: 2px; background: var(--header-line); }
+
+/* ── Footer ────────────────────────────────────────────────── */
+.page-footer {
+  background: var(--footer-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 28px;
+  margin-top: auto;
+}
+.footer-zoopla { color: white; font-size: 18pt; font-weight: 900; letter-spacing: -.02em; }
+.footer-right { display: flex; align-items: center; gap: 6px; }
+.footer-powered { color: rgba(255,255,255,.8); font-size: 8.5pt; }
+.footer-bars { display: flex; align-items: flex-end; gap: 2px; margin: 0 2px; }
+.footer-bars span { background: white; width: 5px; border-radius: 1px; display: inline-block; }
+.footer-hometrack { color: white; font-size: 10pt; font-weight: 700; letter-spacing: -.01em; }
+
+/* ── Cover page ────────────────────────────────────────────── */
+.logo-box {
+  background: #1A1A2E;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 20px;
+  min-width: 120px;
+  margin-bottom: 36px;
+}
+.logo-name  { color: white; font-size: 14pt; font-weight: 800; letter-spacing: .01em; }
+.logo-sub   { color: #D4A4A4; font-size: 7pt; letter-spacing: .12em; margin-top: 2px; }
+
+.cover-title { font-size: 30pt; font-weight: 900; color: var(--header-bg); margin-bottom: 28px; }
+
+.cover-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding-top: 20px;
+  border-top: 1.5px dashed #C0BAD0;
+}
+.cover-grid-right {
+  border-left: 1.5px dashed #C0BAD0;
+  padding-left: 24px;
+}
+.cover-grid-left  { padding-right: 24px; }
+.cover-addr { color: var(--purple); font-size: 10.5pt; line-height: 1.8; }
+
+.agent-text { font-size: 10pt; color: var(--text-body); line-height: 1.7; }
+
+/* ── Property summary page ─────────────────────────────────── */
+.intro-text { font-size: 10pt; color: #444; line-height: 1.6; margin-bottom: 22px; }
+
+.attr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 26px; }
+.attr-card {
+  background: white;
+  border: 1px solid var(--card-border);
+  border-radius: 2px;
+  padding: 18px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+.attr-icon  { width: 44px; height: 44px; margin-bottom: 10px; }
+.attr-label { font-size: 8.5pt; color: var(--text-muted); margin-bottom: 3px; }
+.attr-value { font-size: 13pt; font-weight: 800; color: var(--header-bg); }
+
+/* ── Market insights ───────────────────────────────────────── */
+.insights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: white;
+  border: 1px solid var(--card-border);
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+.insights-left  { padding: 18px; border-right: 1.5px dashed #D1D5DB; }
+.insights-right { padding: 18px; }
+
+.area-label { font-size: 8pt; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
+
+.pct-box {
+  background: var(--purple);
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+.pct-box-value { color: white; font-size: 26pt; font-weight: 900; line-height: 1; }
+
+.insight-desc { font-size: 9pt; color: var(--purple); line-height: 1.5; margin-bottom: 16px; }
+.insight-divider { border: 0; border-top: 1.5px dashed #D1D5DB; margin-bottom: 14px; }
+
+/* Chart */
+.chart-wrap { width: 100%; }
+.chart-legend { margin-top: 6px; }
+.chart-legend-item { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.legend-line { width: 16px; height: 2px; flex-shrink: 0; border-radius: 1px; }
+.legend-text { font-size: 7.5pt; color: var(--text-muted); }
+.chart-caption { font-size: 8pt; color: #555; margin-top: 6px; }
+
+/* Weeks + searches */
+.weeks-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.weeks-box {
+  border: 2px solid var(--purple);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.weeks-num  { font-size: 18pt; font-weight: 900; color: var(--purple); line-height: 1; }
+.weeks-side { }
+.weeks-word { font-size: 18pt; font-weight: 900; color: var(--purple); line-height: 1; }
+.weeks-sub  { font-size: 9pt; color: var(--text-muted); }
+
+.searches-row  { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; margin-top: 16px; }
+.searches-box  { border: 2px solid var(--purple); padding: 6px 12px; }
+.searches-val  { font-size: 13pt; font-weight: 800; color: var(--purple); white-space: nowrap; }
+.search-icon   { border: 2px solid var(--purple); padding: 5px; display: flex; }
+
+/* ── Comparables page ──────────────────────────────────────── */
+.comp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: white;
+  border: 1px solid var(--card-border);
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  margin-bottom: 24px;
+}
+.comp-cell {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+}
+.comp-cell-border-right  { border-right:  1.5px dashed #D1D5DB; }
+.comp-cell-border-bottom { border-bottom: 1.5px dashed #D1D5DB; }
+
+.comp-img {
+  width: 108px;
+  height: 74px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #C8C4C0, #A8A4A0 50%, #B8B4B0);
+  position: relative;
+  border-radius: 1px;
+  overflow: hidden;
+}
+.comp-img-google {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  font-size: 7pt;
+  color: white;
+  background: rgba(0,0,0,.45);
+  padding: 1px 4px;
+  border-radius: 1px;
+}
+.comp-details { font-size: 8.5pt; line-height: 1.65; }
+.comp-street  { font-weight: 700; font-size: 9.5pt; color: var(--purple); margin-bottom: 1px; }
+.comp-meta    { color: #555; }
+.comp-price   { font-weight: 600; color: #222; margin-top: 2px; }
+
+/* ── Valuation section ─────────────────────────────────────── */
+.val-row   { display: grid; gap: 10px; margin-bottom: 10px; }
+.val-row-3 { grid-template-columns: repeat(3, 1fr); }
+.val-row-2 { grid-template-columns: repeat(2, 1fr); }
+
+.val-card {
+  background: white;
+  border: 1px solid var(--card-border);
+  border-radius: 2px;
+  padding: 18px 14px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 86px;
+}
+.val-label { font-size: 9pt; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px; }
+.val-value { font-size: 20pt; font-weight: 900; line-height: 1.1; }
+.val-value.orange { color: var(--orange); }
+.val-value.purple { color: var(--purple); }
+.val-value.dark   { color: var(--header-bg); }
+.val-sub   { font-size: 8.5pt; color: #999; margin-top: 3px; }
+
+/* ── Back page ─────────────────────────────────────────────── */
+.back-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.back-col-right { border-left: 1px solid var(--card-border); padding-left: 20px; }
+.back-col-left  { padding-right: 20px; }
+.back-text  { font-size: 9.5pt; color: #555; line-height: 1.7; }
+.back-agent-name { font-size: 10pt; font-weight: 700; color: #222; margin-bottom: 6px; }
+.back-agent-detail { font-size: 9.5pt; color: #555; line-height: 1.8; }
+
+.mosaic { display: grid; grid-template-columns: repeat(3, 1fr); height: 230px; }
+.mosaic-cell { position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+.disclaimer-block { padding: 24px 36px; }
+.disclaimer-headline { font-size: 10pt; font-weight: 600; color: #333; line-height: 1.5; margin-bottom: 10px; }
+.disclaimer-body { font-size: 7.5pt; color: #777; line-height: 1.55; margin-bottom: 6px; }
+.disclaimer-copyright { font-size: 7pt; color: #aaa; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+{# ════════════════════════════════════════════════════════════ #}
+{# PAGE 1: COVER                                               #}
+{# ════════════════════════════════════════════════════════════ #}
+<div class="page">
+  <div class="page-inner">
+
+    <div class="logo-box">
+      <span class="logo-name">{{ agent_name }}</span>
+      <span class="logo-sub">PROPERTY</span>
+    </div>
+
+    <div class="card" style="padding: 28px 28px 24px;">
+      <h1 class="cover-title">Property Valuation</h1>
+      <div class="cover-grid">
+        <div class="cover-grid-left">
+          <p class="cover-addr">
+            {{ property.address1 }}<br>
+            {{ property.address2 }}<br>
+            {{ property.postcode }}
+          </p>
+        </div>
+        <div class="cover-grid-right">
+          <p class="cover-addr">
+            Created by<br>
+            {{ agent_name }}<br>
+            {{ report_date }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 32px;">
+      <div class="section-header">
+        <div class="section-header-box">Agent profile</div>
+        <div class="section-header-line"></div>
+      </div>
+      <div class="card" style="padding: 20px 22px;">
+        <p class="agent-text" style="margin-bottom: 12px;">
+          Your agent has generated this in-depth valuation report using data from multiple
+          sources including HM Land Registry and EPC Register. Our automated valuation model
+          combines statistical techniques with live market data.
+        </p>
+        <p class="agent-text">
+          Having reviewed the comparable sales in your area, we are able to provide
+          an evidence-based estimate of your property's current market value.
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span class="footer-zoopla">{{ agent_name }}</span>
+    <div class="footer-right">
+      <span class="footer-powered">Valuation powered by</span>
+      <div class="footer-bars">
+        <span style="height:7px"></span>
+        <span style="height:10px"></span>
+        <span style="height:14px"></span>
+        <span style="height:10px"></span>
+        <span style="height:7px"></span>
+      </div>
+      <span class="footer-hometrack">PropVal AVM</span>
+    </div>
+  </div>
+</div>
+
+
+{# ════════════════════════════════════════════════════════════ #}
+{# PAGE 2: PROPERTY SUMMARY + MARKET INSIGHTS                  #}
+{# ════════════════════════════════════════════════════════════ #}
+<div class="page">
+  <div class="page-inner">
+
+    <div class="section-header">
+      <div class="section-header-box">Your property summary</div>
+      <div class="section-header-line"></div>
+    </div>
+
+    <p class="intro-text">
+      This exclusive report provides a unique up-to-date insight into the value of your property
+      and analysis of the local market, for
+      <strong>{{ property.address1 }} {{ property.address2 }}, {{ property.postcode }}</strong>
+    </p>
+
+    {# 3×2 attribute grid #}
+    <div class="attr-grid">
+
+      {# Property type #}
+      <div class="attr-card">
+        <svg class="attr-icon" viewBox="0 0 44 44">
+          <path d="M22 5L3 19.5V22h4v16h10V28h10v10h10V22h4v-2.5L22 5z" fill="none" stroke="#4B2590" stroke-width="2" stroke-linejoin="round"/>
+          <rect x="17" y="28" width="10" height="10" fill="none" stroke="#4B2590" stroke-width="1.5"/>
+        </svg>
+        <p class="attr-label">Property type</p>
+        <p class="attr-value">{{ property.type }}</p>
+      </div>
+
+      {# Floor area #}
+      <div class="attr-card">
+        <svg class="attr-icon" viewBox="0 0 44 44">
+          <rect x="5" y="5" width="34" height="34" rx="1" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <polyline points="5,22 25,22 25,5" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <line x1="25" y1="22" x2="25" y2="39" stroke="#4B2590" stroke-width="2"/>
+          <line x1="15" y1="22" x2="15" y2="39" stroke="#4B2590" stroke-width="1.5"/>
+        </svg>
+        <p class="attr-label">Total floor area</p>
+        <p class="attr-value">{{ property.floor_area }}</p>
+      </div>
+
+      {# Year built #}
+      <div class="attr-card">
+        <svg class="attr-icon" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r="16" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <circle cx="22" cy="22" r="1.5" fill="#4B2590"/>
+          <line x1="22" y1="22" x2="22" y2="10" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+          <line x1="22" y1="22" x2="30" y2="22" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p class="attr-label">Year built</p>
+        <p class="attr-value">{{ property.year_built }}</p>
+      </div>
+
+      {# Receptions #}
+      <div class="attr-card">
+        <svg class="attr-icon" viewBox="0 0 44 44">
+          <rect x="9" y="18" width="26" height="12" rx="3" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <rect x="5" y="22" width="7" height="8" rx="2" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <rect x="32" y="22" width="7" height="8" rx="2" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <rect x="9" y="14" width="26" height="6" rx="2" fill="none" stroke="#4B2590" stroke-width="1.5"/>
+          <line x1="12" y1="30" x2="12" y2="36" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+          <line x1="32" y1="30" x2="32" y2="36" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p class="attr-label">Receptions</p>
+        <p class="attr-value">{{ property.receptions }}</p>
+      </div>
+
+      {# Bedrooms #}
+      <div class="attr-card">
+        <svg class="attr-icon" viewBox="0 0 44 44">
+          <rect x="4" y="24" width="36" height="11" rx="2" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <rect x="4" y="16" width="5" height="12" rx="1" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <rect x="15" y="19" width="12" height="8" rx="2" fill="none" stroke="#4B2590" stroke-width="1.5"/>
+          <rect x="29" y="19" width="11" height="8" rx="2" fill="none" stroke="#4B2590" stroke-width="1.5"/>
+          <line x1="4" y1="35" x2="4" y2="40" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+          <line x1="40" y1="35" x2="40" y2="40" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p class="attr-label">Bedrooms</p>
+        <p class="attr-value">{{ property.bedrooms }}</p>
+      </div>
+
+      {# Bathrooms #}
+      <div class="attr-card">
+        <svg class="attr-icon" viewBox="0 0 44 44">
+          <path d="M6 22h32v6a7 7 0 01-7 7H13a7 7 0 01-7-7v-6z" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <path d="M11 22V14a4 4 0 018 0v2" fill="none" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+          <line x1="8" y1="35" x2="6" y2="40" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+          <line x1="36" y1="35" x2="38" y2="40" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p class="attr-label">Bathrooms</p>
+        <p class="attr-value">{{ property.bathrooms }}</p>
+      </div>
+
+    </div>{# end attr-grid #}
+
+    {# Market insights #}
+    <div class="section-header">
+      <div class="section-header-box">Market insights</div>
+      <div class="section-header-line"></div>
+    </div>
+
+    <div class="insights-grid">
+
+      {# LEFT: asking price % + chart #}
+      <div class="insights-left">
+        <p class="area-label">{{ market.area }}</p>
+        <div class="pct-box">
+          <span class="pct-box-value">{{ market.asking_price_pct }}%</span>
+        </div>
+        <p class="insight-desc">
+          Properties near you are achieving an average of
+          <strong>{{ market.asking_price_pct }}%</strong> of the asking price
+        </p>
+        <hr class="insight-divider">
+
+        {# SVG line chart #}
+        <div class="chart-wrap">
+          <svg viewBox="{{ chart.viewbox }}" width="100%" style="height:140px;" xmlns="http://www.w3.org/2000/svg">
+            {# Horizontal gridlines #}
+            {% for y in chart.grid_lines %}
+            <line x1="46" y1="{{ '%.2f' % y }}" x2="246" y2="{{ '%.2f' % y }}"
+                  stroke="#E5E7EB" stroke-width="0.5"/>
+            {% endfor %}
+            {# Y axis labels #}
+            {% for y, label in chart.y_ticks %}
+            <text x="43" y="{{ '%.2f' % (y + 2.5) }}" text-anchor="end"
+                  font-size="6" fill="#888" font-family="Inter, sans-serif">{{ label }}</text>
+            {% endfor %}
+            {# Area average line (gray) #}
+            <polyline points="{{ chart.avg_polyline }}"
+                      fill="none" stroke="#9CA3AF" stroke-width="1.3" stroke-linejoin="round"/>
+            {% for x, y in chart.avg_dots %}
+            <circle cx="{{ '%.2f' % x }}" cy="{{ '%.2f' % y }}" r="2.2" fill="#9CA3AF"/>
+            {% endfor %}
+            {# Subject property line (dark purple) #}
+            <polyline points="{{ chart.subject_polyline }}"
+                      fill="none" stroke="#2B1649" stroke-width="1.3" stroke-linejoin="round"/>
+            {% for x, y in chart.subject_dots %}
+            <circle cx="{{ '%.2f' % x }}" cy="{{ '%.2f' % y }}" r="2.2" fill="#2B1649"/>
+            {% endfor %}
+            {# X axis labels #}
+            {% for x, label in chart.x_labels %}
+            <text x="{{ '%.2f' % x }}" y="133" text-anchor="middle"
+                  font-size="6" fill="#888" font-family="Inter, sans-serif">{{ label }}</text>
+            {% endfor %}
+          </svg>
+
+          <div class="chart-legend">
+            <div class="chart-legend-item">
+              <div class="legend-line" style="background:#2B1649;"></div>
+              <span class="legend-text">Estimated value of this property</span>
+            </div>
+            <div class="chart-legend-item">
+              <div class="legend-line" style="background:#9CA3AF;"></div>
+              <span class="legend-text">Average value of {{ market.bedrooms }} bedroom
+                {{ market.prop_type_plural }} in {{ market.postcode_sector }}</span>
+            </div>
+          </div>
+          <p class="chart-caption">
+            Price change over the last 5 years of {{ market.bedrooms }} bedroom
+            {{ market.prop_type_plural }} in <strong>{{ market.postcode_sector }}</strong>
+          </p>
+        </div>
+      </div>{# end insights-left #}
+
+      {# RIGHT: weeks on market + searches #}
+      <div class="insights-right">
+        {% if market.weeks_on_market != '—' %}
+        <div class="weeks-row">
+          <div class="weeks-box">
+            <span class="weeks-num">{{ market.weeks_on_market }}</span>
+          </div>
+          <div class="weeks-side">
+            <div class="weeks-word">weeks</div>
+            <div class="weeks-sub">on market</div>
+          </div>
+        </div>
+        <p class="insight-desc">
+          Properties near you spend an average time on the market of
+          <strong>{{ market.weeks_on_market }} weeks</strong>
+        </p>
+        {% else %}
+        <p class="insight-desc" style="color:#999;">
+          Average time on market data not available for this area.
+        </p>
+        {% endif %}
+
+        <hr class="insight-divider" style="margin-top:16px;">
+
+        {% if market.searches != '—' %}
+        <div class="searches-row">
+          <div class="searches-box">
+            <span class="searches-val">{{ market.searches }} searches</span>
+          </div>
+          <div class="search-icon">
+            <svg viewBox="0 0 20 20" width="18" height="18">
+              <circle cx="9" cy="9" r="5.5" fill="none" stroke="#4B2590" stroke-width="2"/>
+              <line x1="13.5" y1="13.5" x2="17" y2="17" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <p class="insight-desc">
+          There were <strong>{{ market.searches }} searches</strong> for properties
+          in {{ market.search_area }} over the past 28 days
+        </p>
+        {% else %}
+        <p class="insight-desc" style="color:#999; margin-top:8px;">
+          Search volume data not available.
+        </p>
+        {% endif %}
+      </div>
+    </div>{# end insights-grid #}
+
+  </div>{# end page-inner #}
+  <div class="page-footer">
+    <span class="footer-zoopla">{{ agent_name }}</span>
+    <div class="footer-right">
+      <span class="footer-powered">Valuation powered by</span>
+      <div class="footer-bars">
+        <span style="height:7px"></span><span style="height:10px"></span>
+        <span style="height:14px"></span><span style="height:10px"></span>
+        <span style="height:7px"></span>
+      </div>
+      <span class="footer-hometrack">PropVal AVM</span>
+    </div>
+  </div>
+</div>
+
+
+{# ════════════════════════════════════════════════════════════ #}
+{# PAGE 3: RECENT ACTIVITY + VALUATION                         #}
+{# ════════════════════════════════════════════════════════════ #}
+<div class="page">
+  <div class="page-inner">
+
+    <div class="section-header">
+      <div class="section-header-box">Recent activity near you</div>
+      <div class="section-header-line"></div>
+    </div>
+
+    <div class="comp-grid">
+      {% for comp in comparables %}
+      {% set col = loop.index0 % 2 %}
+      {% set row = loop.index0 // 2 %}
+      {% set total_rows = ((comparables | length) + 1) // 2 %}
+      <div class="comp-cell
+        {{ 'comp-cell-border-right' if col == 0 else '' }}
+        {{ 'comp-cell-border-bottom' if row < total_rows - 1 else '' }}
+      ">
+        {# Street-view style placeholder #}
+        <div class="comp-img">
+          <svg viewBox="0 0 108 74" width="108" height="74" style="position:absolute;inset:0;opacity:.18;">
+            <rect x="14" y="10" width="30" height="22" rx="1" fill="none" stroke="white" stroke-width="2.5"/>
+            <rect x="54" y="10" width="30" height="22" rx="1" fill="none" stroke="white" stroke-width="2.5"/>
+            <rect x="28" y="44" width="20" height="22" rx="1" fill="none" stroke="white" stroke-width="2"/>
+            <rect x="60" y="44" width="20" height="22" rx="1" fill="none" stroke="white" stroke-width="2"/>
+          </svg>
+          <span class="comp-img-google">Google</span>
+        </div>
+
+        <div class="comp-details">
+          <p class="comp-street">{{ comp.street }}</p>
+          <p class="comp-meta">Distance: {{ comp.distance }}</p>
+          <p class="comp-meta">Type: {{ comp.type }}</p>
+          <p class="comp-meta">Size: {{ comp.size }}</p>
+          <p class="comp-price">Last sold price: {{ comp.price }}</p>
+          <p class="comp-meta">Sold date: {{ comp.date }}</p>
+        </div>
+      </div>
+      {% endfor %}
+
+      {# Pad to even number of cells if needed #}
+      {% if comparables | length % 2 != 0 %}
+      <div class="comp-cell"></div>
+      {% endif %}
+    </div>
+
+    {# Valuation section #}
+    <div class="section-header">
+      <div class="section-header-box">Your valuation powered by PropVal AVM</div>
+      <div class="section-header-line"></div>
+    </div>
+
+    {# Row 1: 3 cards #}
+    <div class="val-row val-row-3">
+      <div class="val-card">
+        <p class="val-label">Estimated<br>capital value</p>
+        <p class="val-value orange">{{ valuation.capital_value }}</p>
+      </div>
+      <div class="val-card">
+        <p class="val-label">Estimated value range</p>
+        <p class="val-value purple" style="font-size:16pt;">
+          {{ valuation.range_low }} to<br>{{ valuation.range_high }}
+        </p>
+      </div>
+      <div class="val-card">
+        <p class="val-label">Confidence<br>in valuation estimate</p>
+        <p class="val-value dark">{{ valuation.confidence }}</p>
+      </div>
+    </div>
+
+    {# Row 2: 2 cards #}
+    <div class="val-row val-row-2">
+      <div class="val-card">
+        <p class="val-label">Last sale</p>
+        <p class="val-value purple">{{ valuation.last_sale_price }}</p>
+        {% if valuation.last_sale_date != 'N/A' %}
+        <p class="val-sub">{{ valuation.last_sale_date }}</p>
+        {% endif %}
+      </div>
+      <div class="val-card">
+        <p class="val-label">Price change<br>since last sale</p>
+        <p class="val-value purple">{{ valuation.price_change }}</p>
+      </div>
+    </div>
+
+    {# Row 3: 2 cards #}
+    <div class="val-row val-row-2">
+      <div class="val-card">
+        <p class="val-label">Estimated<br>rental value</p>
+        <p class="val-value orange">{{ valuation.rental_value }}</p>
+      </div>
+      <div class="val-card">
+        <p class="val-label">Estimated gross<br>rental yield</p>
+        <p class="val-value dark">{{ valuation.gross_yield }}</p>
+      </div>
+    </div>
+
+  </div>{# end page-inner #}
+  <div class="page-footer">
+    <span class="footer-zoopla">{{ agent_name }}</span>
+    <div class="footer-right">
+      <span class="footer-powered">Valuation powered by</span>
+      <div class="footer-bars">
+        <span style="height:7px"></span><span style="height:10px"></span>
+        <span style="height:14px"></span><span style="height:10px"></span>
+        <span style="height:7px"></span>
+      </div>
+      <span class="footer-hometrack">PropVal AVM</span>
+    </div>
+  </div>
+</div>
+
+
+{# ════════════════════════════════════════════════════════════ #}
+{# PAGE 4: BACK PAGE                                           #}
+{# ════════════════════════════════════════════════════════════ #}
+<div class="page">
+  <div style="flex:1; background: var(--page-bg);">
+
+    <div style="padding: 28px 36px 0;">
+      {# Agent logo #}
+      <div class="logo-box" style="margin-bottom: 20px;">
+        <span class="logo-name">{{ agent_name }}</span>
+        <span class="logo-sub">PROPERTY</span>
+      </div>
+
+      {# Two-column info card #}
+      <div class="card" style="padding: 22px 24px; margin-bottom: 0;">
+        <div class="back-two-col">
+          <div class="back-col-left">
+            <p class="back-text">
+              This report was generated using our automated valuation model, combining
+              comparable sales data from HM Land Registry, EPC certificates, and
+              regional market indices. Our data is trusted by property professionals
+              across the UK.
+            </p>
+          </div>
+          <div class="back-col-right">
+            <p class="back-agent-name">{{ agent_name }}</p>
+            <p class="back-agent-detail">
+              Ref: {{ report_id }}<br>
+              Report date: {{ report_date }}<br>
+              Data sources: {{ valuation.source_apis }}<br>
+              Confidence: {{ valuation.confidence_pct }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Window mosaic — full bleed #}
+    <div class="mosaic" style="margin-top: 20px;">
+      {% set mosaic_colors = ['#C8B96A','#E8E2D8','#C05A38','#DCDCD8','#E4DDD0','#A89888'] %}
+      {% for bg in mosaic_colors %}
+      <div class="mosaic-cell" style="background: {{ bg }};">
+        <svg viewBox="0 0 110 90" width="88" style="opacity:.28;">
+          <rect x="10" y="8"  width="40" height="32" rx="1" fill="none" stroke="white" stroke-width="3"/>
+          <rect x="60" y="8"  width="40" height="32" rx="1" fill="none" stroke="white" stroke-width="3"/>
+          <rect x="10" y="52" width="40" height="30" rx="1" fill="none" stroke="white" stroke-width="3"/>
+          <rect x="60" y="52" width="40" height="30" rx="1" fill="none" stroke="white" stroke-width="3"/>
+          <line x1="30" y1="8"  x2="30" y2="40" stroke="white" stroke-width="1.5"/>
+          <line x1="80" y1="8"  x2="80" y2="40" stroke="white" stroke-width="1.5"/>
+          <line x1="10" y1="24" x2="50" y2="24" stroke="white" stroke-width="1.5"/>
+          <line x1="60" y1="24" x2="100" y2="24" stroke="white" stroke-width="1.5"/>
+          <line x1="30" y1="52" x2="30" y2="82" stroke="white" stroke-width="1.5"/>
+          <line x1="80" y1="52" x2="80" y2="82" stroke="white" stroke-width="1.5"/>
+        </svg>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# Disclaimer #}
+    <div class="disclaimer-block">
+      <p class="disclaimer-headline">
+        This report was created using an automated valuation model. Valuation data
+        is relied upon for indicative purposes only.
+      </p>
+      <p class="disclaimer-body">
+        The estimated valuations in this report were generated using an automated
+        valuation model — a computer model which generates estimated valuations by
+        combining statistical techniques with market data including HM Land Registry
+        Price Paid data and EPC certificates.
+      </p>
+      <p class="disclaimer-body">
+        This report is intended only for private, non-commercial use. The estimated
+        valuations are for general information only and are produced without any
+        inspection of the property or any legal documents relating to it. The data
+        provider cannot verify all data used and does not guarantee that this report
+        is accurate, complete or suitable for your intended use.
+      </p>
+      <p class="disclaimer-body">
+        You should not rely on this report. You should seek professional advice before
+        making any financial or other decision in relation to the property.
+      </p>
+      <p class="disclaimer-copyright">
+        Report ID: {{ report_id }} · Generated: {{ report_date }} · © {{ report_date[-4:] }} PropVal
+      </p>
+    </div>
+
+  </div>{# end flex-1 #}
+  <div class="page-footer">
+    <span class="footer-zoopla">{{ agent_name }}</span>
+    <div class="footer-right">
+      <span class="footer-powered">Valuation powered by</span>
+      <div class="footer-bars">
+        <span style="height:7px"></span><span style="height:10px"></span>
+        <span style="height:14px"></span><span style="height:10px"></span>
+        <span style="height:7px"></span>
+      </div>
+      <span class="footer-hometrack">PropVal AVM</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
