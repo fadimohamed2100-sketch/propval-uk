@@ -32,3 +32,23 @@ export function StatRow({ label, value, mono, className }: { label: string; valu
 export function Divider({ className }: { className?: string }) {
   return <hr className={clsx("border-stone-100", className)} />;
 }
+
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={clsx("animate-pulse bg-stone-200 rounded-lg", className)} />;
+}
+
+export function SkeletonCard({ lines = 3 }: { lines?: number }) {
+  return (
+    <Card>
+      <Skeleton className="h-5 w-32 mb-5" />
+      <div className="space-y-3">
+        {Array.from({ length: lines }).map((_, i) => (
+          <div key={i} className="flex justify-between">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
