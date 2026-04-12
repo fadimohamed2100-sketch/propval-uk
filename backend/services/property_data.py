@@ -62,7 +62,7 @@ class PropertyDataService:
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
             logger.warning("land_registry_error", status=exc.response.status_code)
-            raise ExternalAPIError("Land Registry", str(exc))
+            return []
 
         rows = resp.json().get("results", [])
         logger.info("land_registry_sales_fetched", postcode=postcode, count=len(rows))
