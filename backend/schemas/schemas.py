@@ -149,7 +149,7 @@ class ValuationOut(_OrmBase):
 
 
 class ValuationDetailOut(ValuationOut):
-    property: PropertyDetailOut
+    property: PropertyDetailOut | None = None
     methodology: dict[str, Any]
 
 
