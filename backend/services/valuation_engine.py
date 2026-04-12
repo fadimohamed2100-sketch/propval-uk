@@ -235,7 +235,7 @@ class ValuationEngine:
             cumulative += score / total_weight
             if cumulative >= 0.5:
                 return comp.sale_price
-        return scored[-1][0].sale_price
+        return scored[-1][0].sale_price if scored else 0
 
     # ------------------------------------------------------------------
     # Confidence
