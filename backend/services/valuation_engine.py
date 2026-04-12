@@ -249,15 +249,15 @@ class ValuationEngine:
 
         # Dispersion component — lower CV → higher confidence
         if n >= 2:
-            mean = statistics.mean(prices)
-            std = statistics.stdev(prices)
+            mean = statistics.mean(prices) if prices else 0
+            std = statistics.stdev(prices) if len(prices) > 1 else 0
             cv = std / mean if mean else 1.0
             dispersion_score = max(0, 1 - cv * 2)
         else:
             dispersion_score = 0.3
 
         # Average similarity score component
-        avg_similarity = statistics.mean(s for _, s in scored)
+        avg_similarity = statistics.mean(s for _, s in scored) if scored else 0
         similarity_score = min(1.0, avg_similarity / 1.5)
 
         raw = (size_score * 0.4) + (dispersion_score * 0.35) + (similarity_score * 0.25)
