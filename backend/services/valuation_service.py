@@ -84,7 +84,7 @@ class ValuationService:
         address, property_ = await self.resolve_address(raw_address)
 
         # Enrich property from EPC if we have one
-        epc = None if settings.MOCK_EXTERNAL_APIS else await self._property_data.get_epc_data(address.postcode)
+        epc = None  # EPC disabled for MVP
 
         if not property_:
             property_ = await self._create_property(address, epc)
