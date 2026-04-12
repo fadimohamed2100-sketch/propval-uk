@@ -243,8 +243,8 @@ class ValuationReport(Base):
         DateTime(timezone=True), nullable=False, default=_now_plus_30d
     )
 
-    property: Mapped["Property"] = relationship(, lazy="selectin")
-        back_populates="valuation_reports", lazy="joined"
+    property: Mapped["Property"] = relationship(
+        back_populates="valuation_reports", lazy="selectin")
     )
     user: Mapped["User | None"] = relationship(
         back_populates="valuation_reports", lazy="noload"
