@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 
 DATABASE_URL = os.environ["DATABASE_URL"]
-LR_URL = "https://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com/pp-2024.csv"
+LR_URL = "https://use-land-property-data.service.gov.uk/datasets/ppd/downloads/pp-2024.csv"
 
 async def main():
     print("Downloading Land Registry 2024 data...")
