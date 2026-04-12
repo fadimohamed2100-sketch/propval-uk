@@ -11,6 +11,8 @@ Coordinates:
   7. Kick off async PDF generation
 """
 from __future__ import annotations
+from core.config import get_settings
+settings = get_settings()
 
 import uuid
 from datetime import datetime, timezone
