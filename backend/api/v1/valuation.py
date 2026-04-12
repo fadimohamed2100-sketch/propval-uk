@@ -51,8 +51,9 @@ def _serialise_valuation(report, *, include_property: bool = False):
 
     if include_property:
         try:
-        base["property"] = report.property
-    except Exception:
+            base["property"] = report.property
+        except Exception:
+            base["property"] = None
         base["property"] = None
         base["methodology"] = report.methodology or {}
         return ValuationDetailOut.model_validate(base)
