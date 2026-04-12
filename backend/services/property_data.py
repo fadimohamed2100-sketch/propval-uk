@@ -28,7 +28,7 @@ class PropertyDataService:
         self._epc_client = httpx.AsyncClient(
             base_url=settings.EPC_API_BASE_URL,
             headers={
-                "Authorization": f"Basic {settings.EPC_API_KEY}",
+                "Authorization": "Basic " + __import__("base64").b64encode(f"{settings.EPC_API_EMAIL}:{settings.EPC_API_KEY}".encode()).decode(),
                 "Accept": "application/json",
             },
             timeout=15.0,

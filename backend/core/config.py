@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     LAND_REGISTRY_BASE_URL: str = "https://use-land-property-data.service.gov.uk/api/v1"
     EPC_API_BASE_URL: str = "https://epc.opendatacommunities.org/api/v1"
     EPC_API_KEY: str = ""
+    EPC_API_EMAIL: str = ""
     NOMINATIM_BASE_URL: str = "https://nominatim.openstreetmap.org"
     GEOCODE_USER_AGENT: str = "PropertyValuationMVP/1.0"
 
