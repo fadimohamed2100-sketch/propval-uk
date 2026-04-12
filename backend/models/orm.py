@@ -245,7 +245,7 @@ class ValuationReport(Base):
 
     property: Mapped["Property"] = relationship(
         back_populates="valuation_reports", lazy="selectin")
-    )
+
     user: Mapped["User | None"] = relationship(
         back_populates="valuation_reports", lazy="noload"
     )
