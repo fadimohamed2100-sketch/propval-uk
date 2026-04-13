@@ -99,7 +99,8 @@ class ValuationService:
                 logger.info("valuation_cache_hit", property_id=str(property_.id))
                 return cached
 
-        # Fetch comparables from Land Registry, fall back to DB
+        # Fetch comparables from Land Registry
+        raw_sales = await self._property_data.get_recent_sales(address.postcode)
         comp_inputs = [
             ComparableInput(
                 address=s["address"],
