@@ -102,7 +102,10 @@ class PropertyDataService:
             logger.warning("epc_api_error", status=exc.response.status_code)
             return None  # EPC is best-effort; don't block the valuation
 
-        rows = resp.json().get("rows", []) if resp.headers.get("content-type", "").startswith("application/json") else []
+        try:
+            rows = resp.json().get("rows", [])
+        except Exception:
+            rows = []
         if not rows:
             return None
 
