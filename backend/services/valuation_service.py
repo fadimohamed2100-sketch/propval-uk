@@ -101,6 +101,15 @@ class ValuationService:
 
         # Fetch comparables from Land Registry
         raw_sales = await self._property_data.get_recent_sales(address.postcode)
+        if not raw_sales:
+            from sqlalchemy import text
+            result = await self._db.execute(
+                text("SELECT address, postcode, price_pence, transaction_date, property_type, source FROM sales_transactions LIMIT 50")
+            )
+            raw_sales = [
+                {"address": r[0], "postcode": r[1], "price_pence": r[2], "transaction_date": str(r[3]), "source": r[5]}
+                for r in result.fetchall()
+            ]
         comp_inputs = [
             ComparableInput(
                 address=s["address"],
