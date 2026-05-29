@@ -104,7 +104,13 @@ class ValuationService:
         if not raw_sales:
             from sqlalchemy import text
             result = await self._db.execute(
-                text("SELECT address, postcode, price_pence, transaction_date, property_type, source FROM sales_transactions LIMIT 50")
+                text("""
+                    SELECT a.address_norm, a.postcode, st.price_pence, st.transaction_date, p.property_type, st.source
+                    FROM sales_transactions st
+                    JOIN properties p ON st.property_id = p.id
+                    JOIN addresses a ON p.address_id = a.id
+                    LIMIT 50
+                """)
             )
             raw_sales = [
                 {"address": r[0], "postcode": r[1], "price_pence": r[2], "transaction_date": str(r[3]), "source": r[5]}
