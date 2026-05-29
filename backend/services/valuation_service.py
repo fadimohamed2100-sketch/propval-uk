@@ -242,6 +242,7 @@ class ValuationService:
             property_type=(epc or {}).get("property_type") or "other",
             floor_area_m2=(epc or {}).get("floor_area_m2"),
             epc_rating=(epc or {}).get("epc_rating"),
+            bedrooms=(epc or {}).get("bedrooms"),
         )
         self._db.add(property_)
         await self._db.flush()

@@ -116,6 +116,7 @@ class PropertyDataService:
             "epc_rating": (row.get("current-energy-rating") or "")[:1].upper() or None,
             "property_type": row.get("property-type", "").lower().replace(" ", "_"),
             "inspection_date": row.get("inspection-date"),
+            "bedrooms": int(row.get("number-habitable-rooms", 0) or 0) or None,
         }
 
     async def close(self) -> None:
