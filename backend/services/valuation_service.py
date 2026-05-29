@@ -113,7 +113,7 @@ class ValuationService:
                 """)
             )
             raw_sales = [
-                {"address": r[0], "postcode": r[1], "price_pence": int(r[2]), "transaction_date": str(r[3]), "source": r[5]}
+                {"address": r[0], "postcode": r[1], "price_pence": int(r[2]), "transaction_date": r[3].isoformat() if hasattr(r[3], "isoformat") else str(r[3]), "source": r[5]}
                 for r in result.fetchall()
             ]
         comp_inputs = [
