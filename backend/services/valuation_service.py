@@ -159,7 +159,10 @@ class ValuationService:
         await self._db.flush()
 
         # Persist Comparables
+        from datetime import date
         for comp_dict in result.comparables_used:
+            if comp_dict.get("sale_date") and isinstance(comp_dict["sale_date"], str):
+                comp_dict["sale_date"] = date.fromisoformat(comp_dict["sale_date"][:10])
             comp = Comparable(
                 valuation_id=report.id,
                 **comp_dict,
