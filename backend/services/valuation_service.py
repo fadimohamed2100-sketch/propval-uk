@@ -121,7 +121,7 @@ class ValuationService:
                 address=s["address"],
                 postcode=s["postcode"],
                 sale_price=s["price_pence"],
-                sale_date=s["transaction_date"],
+                sale_date=__import__("datetime").date.fromisoformat(str(s["transaction_date"])[:10]) if s["transaction_date"] else None,
                 property_type=property_.property_type,
                 bedrooms=property_.bedrooms,
                 floor_area_m2=property_.floor_area_m2,
