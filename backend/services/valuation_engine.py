@@ -116,7 +116,7 @@ class ValuationEngine:
                 "bedrooms": c.bedrooms,
                 "floor_area_m2": c.floor_area_m2,
                 "sale_price": c.sale_price,
-                "sale_date": c.sale_date.isoformat() if c.sale_date else None,
+                "sale_date": c.sale_date.isoformat() if hasattr(c.sale_date, "isoformat") else c.sale_date,
                 "price_per_m2": (
                     int(c.sale_price / c.floor_area_m2)
                     if c.floor_area_m2 else None
