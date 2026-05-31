@@ -198,7 +198,7 @@ class ValuationEngine:
             # Size proximity (± 20% floor area → max bonus)
             if subject_floor_area_m2 and c.floor_area_m2:
                 ratio = c.floor_area_m2 / subject_floor_area_m2
-                score += 0.3 * max(0, 1 - abs(1 - ratio) * 5)
+                score += 0.3 * max(0, 1 - abs(1 - float(ratio)) * 5)
 
             # Proximity bonus (closer = more similar)
             if c.distance_m is not None:
