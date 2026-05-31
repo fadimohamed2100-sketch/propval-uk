@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, MapPin, TrendingUp, ChevronRight, Building2, Sparkles } from "lucide-react";
+import { Search, MapPin, TrendingUp, Building2, Sparkles, ChevronDown } from "lucide-react";
 import { runValuation } from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
 
@@ -14,46 +14,51 @@ const EXAMPLE_ADDRESSES = [
 ];
 
 const STATS = [
-  { label: "Properties valued",  value: "280k+",  icon: Building2 },
-  { label: "Data accuracy",      value: "94%",     icon: TrendingUp },
-  { label: "Comparable sources", value: "3",       icon: Sparkles },
+  { label: "Properties valued", value: "280k+", icon: Building2 },
+  { label: "Data accuracy", value: "94%", icon: TrendingUp },
+  { label: "Comparable sources", value: "3", icon: Sparkles },
 ];
 
 export default function HomePage() {
   const router = useRouter();
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showExtra, setShowExtra] = useState(false);
+  const [bedrooms, setBedrooms] = useState("");
+  const [bathrooms, setBathrooms] = useState("");
+  const [condition, setCondition] = useState("");
+  const [parking, setParking] = useState("none");
+  const [outdoorSpace, setOutdoorSpace] = useState("none");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleSubmit(e: React.FormEvent | null, overrideAddress?: string) {
     e?.preventDefault();
     const query = (overrideAddress ?? address).trim();
-    if (!query) {
-      inputRef.current?.focus();
-      return;
-    }
-
+    if (!query) { inputRef.current?.focus(); return; }
     setLoading(true);
     setError(null);
-
     try {
-      const result = await runValuation({ address: query });
+      const payload: any = { address: query };
+      if (bedrooms) payload.bedrooms = parseInt(bedrooms);
+      if (bathrooms) payload.bathrooms = parseInt(bathrooms);
+      if (condition) payload.condition = condition;
+      if (parking) payload.parking = parking;
+      if (outdoorSpace) payload.outdoor_space = outdoorSpace;
+      const result = await runValuation(payload);
       router.push(`/results/${result.id}`);
     } catch (err) {
-      if (err instanceof ApiClientError) {
-        setError(err.detail);
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
+      if (err instanceof ApiClientError) setError(err.detail);
+      else setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   }
 
+  const selectClass = "w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm text-ink outline-none focus:border-gold-400 transition-colors cursor-pointer";
+  const labelClass = "block text-xs text-ink-muted uppercase tracking-wider mb-2 font-mono";
+
   return (
     <main className="min-h-screen flex flex-col">
-
-      {/* ── Nav ───────────────────────────────────────────── */}
       <nav className="flex items-center justify-between px-6 py-5 max-w-6xl mx-auto w-full">
         <span className="font-display text-xl font-semibold tracking-tight">
           Prop<span className="text-gold-400">Val</span>
@@ -61,40 +66,26 @@ export default function HomePage() {
         <div className="flex items-center gap-6 text-sm text-ink-muted">
           <a href="#how" className="hover:text-ink transition-colors">How it works</a>
           <a href="#" className="hover:text-ink transition-colors">API</a>
-          <button className="bg-ink text-stone-50 px-4 py-2 rounded-full text-sm font-medium hover:bg-stone-800 transition-colors">
-            Sign in
-          </button>
+          <button className="bg-ink text-stone-50 px-4 py-2 rounded-full text-sm font-medium hover:bg-stone-800 transition-colors">Sign in</button>
         </div>
       </nav>
 
-      {/* ── Hero ──────────────────────────────────────────── */}
       <section className="flex-1 flex flex-col items-center justify-center px-4 py-20 md:py-32">
-        <div className="w-full max-w-2xl text-center stagger">
-
-          {/* Eyebrow */}
+        <div className="w-full max-w-2xl text-center">
           <div className="inline-flex items-center gap-2 bg-gold-300/20 text-gold-500 border border-gold-300/40 rounded-full px-4 py-1.5 text-xs font-mono uppercase tracking-widest mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse" />
-            Powered by Land Registry data
+            Powered by PropertyData & EPC
           </div>
-
-          {/* Headline */}
           <h1 className="font-display text-5xl md:text-6xl lg:text-7xl leading-[1.08] tracking-tight text-ink mb-6">
-            What&apos;s your
-            <br />
+            What&apos;s your<br />
             <span className="text-gold-400 italic">property worth?</span>
           </h1>
-
           <p className="text-ink-muted text-lg md:text-xl leading-relaxed mb-12 max-w-xl mx-auto">
-            Instant, data-driven valuations for any UK property.
-            Compare comparable sales, estimate rental yield, and download a branded report.
+            Instant, data-driven valuations for any UK property. Compare comparable sales, estimate rental yield, and download a branded report.
           </p>
 
-          {/* Search form */}
-          <form onSubmit={handleSubmit} className="relative w-full">
-            <div className={`
-              relative flex items-center bg-white rounded-2xl border-2 transition-all shadow-card-lg
-              ${error ? "border-red-300" : "border-stone-200 focus-within:border-gold-400"}
-            `}>
+          <form onSubmit={handleSubmit} className="w-full text-left">
+            <div className={`relative flex items-center bg-white rounded-2xl border-2 transition-all shadow-card-lg mb-3 ${error ? "border-red-300" : "border-stone-200 focus-within:border-gold-400"}`}>
               <MapPin className="absolute left-5 text-ink-faint" size={20} />
               <input
                 ref={inputRef}
@@ -109,49 +100,88 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={loading || !address.trim()}
-                className="m-2 flex items-center gap-2 bg-ink text-stone-50 px-6 py-3.5 rounded-xl font-medium text-sm
-                           hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all
-                           active:scale-[0.98]"
+                className="m-2 flex items-center gap-2 bg-ink text-stone-50 px-6 py-3.5 rounded-xl font-medium text-sm hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
               >
                 {loading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Valuing…
-                  </>
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Valuing…</>
                 ) : (
-                  <>
-                    <Search size={16} />
-                    Value it
-                  </>
+                  <><Search size={16} />Value it</>
                 )}
               </button>
             </div>
 
-            {error && (
-              <p className="mt-3 text-sm text-red-500 text-left pl-1 animate-fade-in">
-                {error}
-              </p>
-            )}
-          </form>
+            {error && <p className="mb-3 text-sm text-red-500 pl-1">{error}</p>}
 
-          {/* Example addresses */}
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
-            {EXAMPLE_ADDRESSES.map((addr) => (
-              <button
-                key={addr}
-                onClick={() => { setAddress(addr); handleSubmit(null, addr); }}
-                disabled={loading}
-                className="text-xs text-ink-muted bg-stone-100 hover:bg-stone-200 border border-stone-200
-                           px-3 py-1.5 rounded-full transition-colors disabled:opacity-40"
-              >
-                {addr.split(",")[0]}
-              </button>
-            ))}
-          </div>
+            <button
+              type="button"
+              onClick={() => setShowExtra(!showExtra)}
+              className="flex items-center gap-2 text-xs text-ink-muted hover:text-ink transition-colors mb-3 pl-1"
+            >
+              <ChevronDown size={14} className={`transition-transform ${showExtra ? "rotate-180" : ""}`} />
+              {showExtra ? "Hide details" : "Improve accuracy — add property details"}
+            </button>
+
+            {showExtra && (
+              <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-3 grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className={labelClass}>Bedrooms</label>
+                  <select value={bedrooms} onChange={e => setBedrooms(e.target.value)} className={selectClass}>
+                    <option value="">Unknown</option>
+                    {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}{n===5?"+":""}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Bathrooms</label>
+                  <select value={bathrooms} onChange={e => setBathrooms(e.target.value)} className={selectClass}>
+                    <option value="">Unknown</option>
+                    {[1,2,3].map(n => <option key={n} value={n}>{n}{n===3?"+":""}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Condition</label>
+                  <select value={condition} onChange={e => setCondition(e.target.value)} className={selectClass}>
+                    <option value="">Unknown</option>
+                    <option value="average">Poor</option>
+                    <option value="good">Average</option>
+                    <option value="excellent">Good</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Parking</label>
+                  <select value={parking} onChange={e => setParking(e.target.value)} className={selectClass}>
+                    <option value="none">None</option>
+                    <option value="single">Single</option>
+                    <option value="double">Double</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Outdoor Space</label>
+                  <select value={outdoorSpace} onChange={e => setOutdoorSpace(e.target.value)} className={selectClass}>
+                    <option value="none">None</option>
+                    <option value="balcony">Balcony</option>
+                    <option value="garden">Garden</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 pl-1">
+              {EXAMPLE_ADDRESSES.map((addr) => (
+                <button
+                  key={addr}
+                  type="button"
+                  onClick={() => { setAddress(addr); handleSubmit(null, addr); }}
+                  disabled={loading}
+                  className="text-xs text-ink-muted bg-stone-100 hover:bg-stone-200 border border-stone-200 px-3 py-1.5 rounded-full transition-colors disabled:opacity-40"
+                >
+                  {addr.split(",")[0]}
+                </button>
+              ))}
+            </div>
+          </form>
         </div>
       </section>
 
-      {/* ── Stats strip ───────────────────────────────────── */}
       <section className="border-t border-stone-100 py-12 px-4">
         <div className="max-w-4xl mx-auto grid grid-cols-3 divide-x divide-stone-100">
           {STATS.map(({ label, value, icon: Icon }) => (
@@ -164,35 +194,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── How it works ──────────────────────────────────── */}
       <section id="how" className="bg-ink py-20 px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="font-display text-3xl md:text-4xl text-stone-50 text-center mb-16">
-            Three methods. One precise estimate.
-          </h2>
+          <h2 className="font-display text-3xl md:text-4xl text-stone-50 text-center mb-16">Three methods. One precise estimate.</h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              {
-                num: "01",
-                title: "Comparable sales",
-                body: "We analyse recent sold prices within 1km, weighted by property similarity, distance, and recency.",
-              },
-              {
-                num: "02",
-                title: "Price per m²",
-                body: "Using local price-per-square-metre rates from EPC and Land Registry data, adjusted for features.",
-              },
-              {
-                num: "03",
-                title: "Growth projection",
-                body: "Your property's last recorded sale price is forward-projected using local HPI indices.",
-              },
+              { num: "01", title: "Comparable sales", body: "We analyse recent sold prices within 1km, weighted by property similarity, distance, and recency." },
+              { num: "02", title: "Price per m²", body: "Using local price-per-square-metre rates from EPC and PropertyData, adjusted for property features." },
+              { num: "03", title: "Growth projection", body: "Your property's last recorded sale price is forward-projected using local HPI indices." },
             ].map(({ num, title, body }) => (
               <div key={num} className="group">
                 <div className="font-mono text-xs text-gold-400 mb-4 tracking-widest">{num}</div>
-                <h3 className="font-display text-xl text-stone-100 mb-3 group-hover:text-gold-300 transition-colors">
-                  {title}
-                </h3>
+                <h3 className="font-display text-xl text-stone-100 mb-3 group-hover:text-gold-300 transition-colors">{title}</h3>
                 <p className="text-stone-400 text-sm leading-relaxed">{body}</p>
               </div>
             ))}
@@ -200,10 +213,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── CTA footer ────────────────────────────────────── */}
       <footer className="border-t border-stone-100 py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-ink-faint">
-          <span>© 2024 PropVal. Not a RICS-compliant valuation.</span>
+          <span>© 2026 PropVal. Not a RICS-compliant valuation.</span>
           <div className="flex gap-6">
             <a href="#" className="hover:text-ink transition-colors">Privacy</a>
             <a href="#" className="hover:text-ink transition-colors">Terms</a>
