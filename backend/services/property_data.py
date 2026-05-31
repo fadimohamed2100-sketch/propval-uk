@@ -158,7 +158,7 @@ class PropertyDataService:
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get("status") == "success":
-                        transactions = data.get("data", {}).get("transactions", [])
+                        raw = data.get("data", {}).get("raw_data", [])
                         return [
                             {
                                 "address": t.get("address", ""),
@@ -167,7 +167,7 @@ class PropertyDataService:
                                 "transaction_date": t.get("date", ""),
                                 "source": "propertydata",
                             }
-                            for t in transactions if t.get("price")
+                            for t in raw if t.get("price")
                         ]
         except Exception as e:
             logger.warning("propertydata_sold_prices_error", error=str(e))
