@@ -99,11 +99,9 @@ class ValuationService:
                 logger.info("valuation_cache_hit", property_id=str(property_.id))
                 return cached
 
-        # Fetch comparables — try PropertyData first, then Land Registry, then seeded DB
+        # Fetch comparables — PropertyData first, then seeded DB
         pd_property_type = (property_.property_type or "flat").replace("_", "-")
         raw_sales = await self._property_data.get_propertydata_sold_prices(address.postcode, pd_property_type)
-        if not raw_sales:
-            raw_sales = await self._property_data.get_recent_sales(address.postcode)
         if not raw_sales:
             from sqlalchemy import text
             result = await self._db.execute(
