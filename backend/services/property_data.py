@@ -156,7 +156,6 @@ class PropertyDataService:
             params = {
                 "key": settings.PROPERTYDATA_API_KEY,
                 "postcode": postcode,
-                "type": property_type,
             }
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.get("https://api.propertydata.co.uk/sold-prices", params=params)
