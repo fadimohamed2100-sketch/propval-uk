@@ -80,14 +80,24 @@ class ValuationService:
         raw_address: str,
         user_id: uuid.UUID | None = None,
         force_refresh: bool = False,
+        bedrooms: int | None = None,
+        bathrooms: int | None = None,
+        condition: str | None = None,
+        parking: str | None = None,
+        outdoor_space: str | None = None,
     ) -> ValuationReport:
         address, property_ = await self.resolve_address(raw_address)
 
         # Enrich property from EPC if we have one
         epc = await self._property_data.get_epc_data(address.postcode)
 
+        # Override EPC data with user-provided values if available
+        if bedrooms and epc:
+            epc["bedrooms"] = bedrooms
         if not property_:
             property_ = await self._create_property(address, epc)
+        elif bedrooms:
+            property_.bedrooms = bedrooms
         elif epc and not property_.floor_area_m2:
             property_.floor_area_m2 = epc.get("floor_area_m2")
             property_.epc_rating = epc.get("epc_rating")

@@ -87,6 +87,11 @@ async def run_valuation(
     report = await svc.run_valuation(
         raw_address=body.address,
         force_refresh=body.force_refresh,
+        bedrooms=body.bedrooms,
+        bathrooms=body.bathrooms,
+        condition=body.condition,
+        parking=body.parking,
+        outdoor_space=body.outdoor_space,
     )
     return _serialise_valuation(report, include_property=True)
 

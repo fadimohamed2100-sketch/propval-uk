@@ -100,6 +100,11 @@ class PropertyDetailOut(_OrmBase):
 # ================================================================
 class ValuationRequest(BaseModel):
     address: str = Field(..., min_length=5, max_length=300)
+    bedrooms: int | None = None
+    bathrooms: int | None = None
+    condition: str | None = None
+    parking: str | None = None
+    outdoor_space: str | None = None
     force_refresh: bool = Field(
         default=False,
         description="Ignore cached valuation and recompute.",
