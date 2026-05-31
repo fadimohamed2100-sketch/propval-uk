@@ -66,6 +66,17 @@ class ValuationResult:
     methodology: dict[str, Any] = field(default_factory=dict)
 
 
+import decimal
+
+def _clean_decimals(obj):
+    if isinstance(obj, dict):
+        return {k: _clean_decimals(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_clean_decimals(v) for v in obj]
+    if isinstance(obj, decimal.Decimal):
+        return float(obj)
+    return obj
+
 class ValuationEngine:
     """
     Produces a ValuationResult given a subject property and a list of comps.
@@ -155,7 +166,7 @@ class ValuationEngine:
             rental_monthly=rental_monthly,
             rental_yield=rental_yield,
             comparables_used=comps_out,
-            methodology=methodology,
+            methodology=_clean_decimals(methodology),
         )
 
     # ------------------------------------------------------------------
