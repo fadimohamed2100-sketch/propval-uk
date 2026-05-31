@@ -120,7 +120,7 @@ class PropertyDataService:
         }
 
 
-async def get_propertydata_valuation(self, postcode: str, property_type: str, bedrooms: int | None, floor_area_m2: float | None) -> dict | None:
+    async def get_propertydata_valuation(self, postcode: str, property_type: str, bedrooms: int | None, floor_area_m2: float | None) -> dict | None:
         """Call PropertyData /valuation-sale endpoint."""
         if not settings.PROPERTYDATA_API_KEY:
             return None
