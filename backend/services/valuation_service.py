@@ -161,34 +161,15 @@ class ValuationService:
         except ValueError as exc:
             raise ValuationFailedError(str(exc))
 
-        # Use PropertyData valuation as primary if available
-        if pd_valuation:
-            pd_data = pd_valuation.get("data", {})
-            estimated_value = int(pd_data.get("estimate", result.estimated_value * 100)) 
-            range_low = int(pd_data.get("range_low", result.range_low * 100))
-            range_high = int(pd_data.get("range_high", result.range_high * 100))
-            confidence = 0.9 if pd_data.get("estimate") else result.confidence_score
-        else:
-            estimated_value = int(result.estimated_value * 100)
-            range_low = int(result.range_low * 100)
-            range_high = int(result.range_high * 100)
-            confidence = result.confidence_score
-
-        if pd_rent:
-            pd_rent_data = pd_rent.get("data", {})
-            rental_monthly = int(pd_rent_data.get("average", result.rental_monthly * 100))
-        else:
-            rental_monthly = int(result.rental_monthly * 100)
-
         # Persist ValuationReport
         report = ValuationReport(
             property_id=property_.id,
             user_id=user_id,
-            estimated_value=estimated_value,
-            range_low=range_low,
-            range_high=range_high,
-            confidence_score=confidence,
-            rental_monthly=rental_monthly,
+            estimated_value=result.estimated_value,
+            range_low=result.range_low,
+            range_high=result.range_high,
+            confidence_score=result.confidence_score,
+            rental_monthly=result.rental_monthly,
             rental_yield=result.rental_yield,
             methodology=result.methodology,
             source_apis=["land_registry"] + (["epc"] if epc else []),
