@@ -120,7 +120,7 @@ class PropertyDataService:
         }
 
 
-    async def get_propertydata_valuation(self, postcode: str, property_type: str, bedrooms: int | None, floor_area_m2: float | None) -> dict | None:
+    async def get_propertydata_valuation(self, postcode: str, property_type: str, bedrooms: int | None, floor_area_m2: float | None, bathrooms: int | None = None, condition: str | None = None, parking: str | None = None, outdoor_space: str | None = None) -> dict | None:
         """Call PropertyData /valuation-sale endpoint."""
         if not settings.PROPERTYDATA_API_KEY:
             return None
@@ -131,6 +131,11 @@ class PropertyDataService:
                 "internal_area": str(int(floor_area_m2)) if floor_area_m2 else None,
                 "property_type": property_type,
                 "bedrooms": str(bedrooms) if bedrooms else None,
+                "bathrooms": str(bathrooms) if bathrooms else None,
+                "finish_quality": condition or "average",
+                "outdoor_space": outdoor_space or "none",
+                "parking": parking or "none",
+                "construction_date": "2000",
             }
             params = {k: v for k, v in params.items() if v is not None}
             async with httpx.AsyncClient(timeout=15.0) as client:
