@@ -163,7 +163,7 @@ class PropertyDataService:
                             {
                                 "address": t.get("address", ""),
                                 "postcode": t.get("postcode", postcode),
-                                "price_pence": int(float(t.get("price", 0))) * 100,
+                                "price_pence": int(float(str(t.get("price", 0)))) * 100,
                                 "transaction_date": t.get("date", ""),
                                 "source": "propertydata",
                             }
