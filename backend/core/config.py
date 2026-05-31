@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     EPC_API_BASE_URL: str = "https://epc.opendatacommunities.org/api/v1"
     EPC_API_KEY: str = ""
     EPC_API_EMAIL: str = ""
+    PROPERTYDATA_API_KEY: str = ""
     NOMINATIM_BASE_URL: str = "https://nominatim.openstreetmap.org"
     GEOCODE_USER_AGENT: str = "PropertyValuationMVP/1.0"
 

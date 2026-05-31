@@ -119,6 +119,82 @@ class PropertyDataService:
             "bedrooms": int(row.get("number-habitable-rooms", 0) or 0) or None,
         }
 
+
+async def get_propertydata_valuation(self, postcode: str, property_type: str, bedrooms: int | None, floor_area_m2: float | None) -> dict | None:
+        """Call PropertyData /valuation-sale endpoint."""
+        if not settings.PROPERTYDATA_API_KEY:
+            return None
+        try:
+            params = {
+                "key": settings.PROPERTYDATA_API_KEY,
+                "postcode": postcode,
+                "internal_area": str(int(floor_area_m2)) if floor_area_m2 else None,
+                "property_type": property_type,
+                "bedrooms": str(bedrooms) if bedrooms else None,
+            }
+            params = {k: v for k, v in params.items() if v is not None}
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get("https://api.propertydata.co.uk/valuation-sale", params=params)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get("status") == "success":
+                        return data
+        except Exception as e:
+            logger.warning("propertydata_error", error=str(e))
+        return None
+
+    async def get_propertydata_sold_prices(self, postcode: str, property_type: str) -> list[dict]:
+        """Call PropertyData /sold-prices endpoint."""
+        if not settings.PROPERTYDATA_API_KEY:
+            return []
+        try:
+            params = {
+                "key": settings.PROPERTYDATA_API_KEY,
+                "postcode": postcode,
+                "type": property_type,
+            }
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get("https://api.propertydata.co.uk/sold-prices", params=params)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get("status") == "success":
+                        transactions = data.get("data", {}).get("transactions", [])
+                        return [
+                            {
+                                "address": t.get("address", ""),
+                                "postcode": t.get("postcode", postcode),
+                                "price_pence": int(float(t.get("price", 0))) * 100,
+                                "transaction_date": t.get("date", ""),
+                                "source": "propertydata",
+                            }
+                            for t in transactions if t.get("price")
+                        ]
+        except Exception as e:
+            logger.warning("propertydata_sold_prices_error", error=str(e))
+        return []
+
+    async def get_propertydata_rent(self, postcode: str, property_type: str, bedrooms: int | None) -> dict | None:
+        """Call PropertyData /valuation-rent endpoint."""
+        if not settings.PROPERTYDATA_API_KEY:
+            return None
+        try:
+            params = {
+                "key": settings.PROPERTYDATA_API_KEY,
+                "postcode": postcode,
+                "type": property_type,
+                "bedrooms": str(bedrooms) if bedrooms else None,
+            }
+            params = {k: v for k, v in params.items() if v is not None}
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get("https://api.propertydata.co.uk/valuation-rent", params=params)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get("status") == "success":
+                        return data
+        except Exception as e:
+            logger.warning("propertydata_rent_error", error=str(e))
+        return None
+
     async def close(self) -> None:
         await self._lr_client.aclose()
         await self._epc_client.aclose()
