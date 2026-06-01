@@ -167,14 +167,18 @@ class PropertyDataService:
                     if data.get("status") == "success":
                         raw = data.get("data", {}).get("raw_data", [])
                         pd_average = data.get("data", {}).get("average", 0)
+                        # Remove new builds
+                        no_new_builds = [t for t in raw if t.get("class") != "new_build"]
+                        if not no_new_builds:
+                            no_new_builds = raw
                         if pd_average:
                             low = pd_average * 0.4
                             high = pd_average * 1.8
-                            filtered = [t for t in raw if t.get("price") and low <= float(str(t.get("price", 0))) <= high]
+                            filtered = [t for t in no_new_builds if t.get("price") and low <= float(str(t.get("price", 0))) <= high]
                             if not filtered:
-                                filtered = raw
+                                filtered = no_new_builds
                         else:
-                            filtered = raw
+                            filtered = no_new_builds
                         return [
                             {
                                 "address": t.get("address", ""),
