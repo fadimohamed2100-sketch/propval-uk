@@ -167,9 +167,12 @@ class PropertyDataService:
                     if data.get("status") == "success":
                         raw = data.get("data", {}).get("raw_data", [])
                         pd_average = data.get("data", {}).get("average", 0)
-                        prices = [float(str(t.get("price", 0))) for t in raw if t.get("price")]
-                        if prices and pd_average:
-                            filtered = [t for t in raw if t.get("price") and float(str(t.get("price", 0))) <= pd_average * 2.5]
+                        if pd_average:
+                            low = pd_average * 0.4
+                            high = pd_average * 1.8
+                            filtered = [t for t in raw if t.get("price") and low <= float(str(t.get("price", 0))) <= high]
+                            if not filtered:
+                                filtered = raw
                         else:
                             filtered = raw
                         return [
