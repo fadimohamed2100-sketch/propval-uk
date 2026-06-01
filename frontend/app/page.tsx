@@ -28,6 +28,8 @@ export default function HomePage() {
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [propertyType, setPropertyType] = useState("");
+  const [tenure, setTenure] = useState("");
+  const [leaseYears, setLeaseYears] = useState("");
   const [condition, setCondition] = useState("");
   const [parking, setParking] = useState("none");
   const [outdoorSpace, setOutdoorSpace] = useState("none");
@@ -44,6 +46,8 @@ export default function HomePage() {
       if (bedrooms) payload.bedrooms = parseInt(bedrooms);
       if (bathrooms) payload.bathrooms = parseInt(bathrooms);
       if (propertyType) payload.property_type = propertyType;
+      if (tenure) payload.tenure = tenure;
+      if (leaseYears) payload.lease_years = parseInt(leaseYears);
       if (condition) payload.condition = condition;
       if (parking) payload.parking = parking;
       if (outdoorSpace) payload.outdoor_space = outdoorSpace;
@@ -158,6 +162,28 @@ export default function HomePage() {
                     <option value="excellent">Good</option>
                   </select>
                 </div>
+                <div>
+                  <label className={labelClass}>Tenure</label>
+                  <select value={tenure} onChange={e => { setTenure(e.target.value); if (e.target.value !== "leasehold") setLeaseYears(""); }} className={selectClass}>
+                    <option value="">Unknown</option>
+                    <option value="freehold">Freehold</option>
+                    <option value="leasehold">Leasehold</option>
+                  </select>
+                </div>
+                {tenure === "leasehold" && (
+                  <div>
+                    <label className={labelClass}>Lease Years Left</label>
+                    <input
+                      type="number"
+                      value={leaseYears}
+                      onChange={e => setLeaseYears(e.target.value)}
+                      placeholder="e.g. 85"
+                      className={selectClass}
+                      min="1"
+                      max="999"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className={labelClass}>Parking</label>
                   <select value={parking} onChange={e => setParking(e.target.value)} className={selectClass}>

@@ -93,6 +93,8 @@ async def run_valuation(
         parking=body.parking,
         outdoor_space=body.outdoor_space,
         property_type=body.property_type,
+        tenure=body.tenure,
+        lease_years=body.lease_years,
     )
     return _serialise_valuation(report, include_property=True)
 

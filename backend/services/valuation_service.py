@@ -86,6 +86,8 @@ class ValuationService:
         parking: str | None = None,
         outdoor_space: str | None = None,
         property_type: str | None = None,
+        tenure: str | None = None,
+        lease_years: int | None = None,
     ) -> ValuationReport:
         address, property_ = await self.resolve_address(raw_address)
 
@@ -118,7 +120,7 @@ class ValuationService:
         # Fetch comparables — PropertyData first, then seeded DB
         pd_type_map = {"flat": "flat", "terraced": "terraced", "semi_detached": "semi-detached", "detached": "detached", "other": "terraced"}
         pd_property_type = pd_type_map.get(property_.property_type or "other", "terraced")
-        raw_sales = await self._property_data.get_propertydata_sold_prices(address.postcode, pd_property_type, bedrooms=property_.bedrooms)
+        raw_sales = await self._property_data.get_propertydata_sold_prices(address.postcode, pd_property_type, bedrooms=property_.bedrooms, tenure=tenure)
         if not raw_sales:
             from sqlalchemy import text
             result = await self._db.execute(
