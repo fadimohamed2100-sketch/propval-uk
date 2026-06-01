@@ -166,10 +166,10 @@ class PropertyDataService:
                     data = resp.json()
                     if data.get("status") == "success":
                         raw = data.get("data", {}).get("raw_data", [])
+                        pd_average = data.get("data", {}).get("average", 0)
                         prices = [float(str(t.get("price", 0))) for t in raw if t.get("price")]
-                        if prices:
-                            avg = sum(prices) / len(prices)
-                            filtered = [t for t in raw if t.get("price") and float(str(t.get("price", 0))) < avg * 3]
+                        if prices and pd_average:
+                            filtered = [t for t in raw if t.get("price") and float(str(t.get("price", 0))) <= pd_average * 2.5]
                         else:
                             filtered = raw
                         return [
