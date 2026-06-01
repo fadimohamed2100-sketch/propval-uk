@@ -232,7 +232,7 @@ class ValuationEngine:
             # Distance decay - exponential falloff
             if c.distance_m is not None:
                 import math
-                distance_weight = math.exp(-float(c.distance_m) / 500)
+                distance_weight = max(0.1, math.exp(-float(c.distance_m) / 2000))
                 score *= distance_weight
             scored.append((c, max(score, 0.01)))
 
