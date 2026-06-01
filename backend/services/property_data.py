@@ -163,6 +163,7 @@ class PropertyDataService:
                 params["bedrooms"] = bedrooms
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.get("https://api.propertydata.co.uk/sold-prices", params=params)
+                logger.info("propertydata_sold_prices_response", status=resp.status_code, body=resp.text[:200])
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get("status") == "success":
