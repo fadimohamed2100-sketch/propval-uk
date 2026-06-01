@@ -27,6 +27,7 @@ export default function HomePage() {
   const [showExtra, setShowExtra] = useState(false);
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
+  const [propertyType, setPropertyType] = useState("");
   const [condition, setCondition] = useState("");
   const [parking, setParking] = useState("none");
   const [outdoorSpace, setOutdoorSpace] = useState("none");
@@ -42,6 +43,7 @@ export default function HomePage() {
       const payload: any = { address: query };
       if (bedrooms) payload.bedrooms = parseInt(bedrooms);
       if (bathrooms) payload.bathrooms = parseInt(bathrooms);
+      if (propertyType) payload.property_type = propertyType;
       if (condition) payload.condition = condition;
       if (parking) payload.parking = parking;
       if (outdoorSpace) payload.outdoor_space = outdoorSpace;
@@ -123,6 +125,16 @@ export default function HomePage() {
 
             {showExtra && (
               <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-3 grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className={labelClass}>Property Type</label>
+                  <select value={propertyType} onChange={e => setPropertyType(e.target.value)} className={selectClass}>
+                    <option value="">Unknown</option>
+                    <option value="terraced">Terraced</option>
+                    <option value="semi-detached">Semi-Detached</option>
+                    <option value="detached">Detached</option>
+                    <option value="flat">Flat</option>
+                  </select>
+                </div>
                 <div>
                   <label className={labelClass}>Bedrooms</label>
                   <select value={bedrooms} onChange={e => setBedrooms(e.target.value)} className={selectClass}>

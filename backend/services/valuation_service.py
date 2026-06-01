@@ -85,6 +85,7 @@ class ValuationService:
         condition: str | None = None,
         parking: str | None = None,
         outdoor_space: str | None = None,
+        property_type: str | None = None,
     ) -> ValuationReport:
         address, property_ = await self.resolve_address(raw_address)
 
@@ -94,6 +95,8 @@ class ValuationService:
         # Override EPC data with user-provided values if available
         if bedrooms and epc:
             epc["bedrooms"] = bedrooms
+        if property_type and epc:
+            epc["property_type"] = property_type
         if not property_:
             property_ = await self._create_property(address, epc)
         elif epc:

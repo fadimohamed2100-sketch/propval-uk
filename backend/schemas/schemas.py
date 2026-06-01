@@ -105,6 +105,7 @@ class ValuationRequest(BaseModel):
     condition: str | None = None
     parking: str | None = None
     outdoor_space: str | None = None
+    property_type: str | None = None
     force_refresh: bool = Field(
         default=False,
         description="Ignore cached valuation and recompute.",
