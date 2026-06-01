@@ -171,6 +171,13 @@ class PropertyDataService:
                         no_new_builds = [t for t in raw if t.get("class") != "new_build"]
                         if not no_new_builds:
                             no_new_builds = raw
+                        # Filter by property type if known
+                        if property_type and property_type not in ["other", "unknown", ""]:
+                            type_map = {"flat": "flat", "terraced": "terraced_house", "semi-detached": "semi-detached_house", "detached": "detached_house"}
+                            pd_type = type_map.get(property_type, "")
+                            type_filtered = [t for t in no_new_builds if pd_type in t.get("type", "")]
+                            if type_filtered:
+                                no_new_builds = type_filtered
                         if pd_average:
                             low = pd_average * 0.4
                             high = pd_average * 1.8
