@@ -186,6 +186,8 @@ class PropertyDataService:
                                 "price_pence": int(float(str(t.get("price", 0)))) * 100,
                                 "transaction_date": t.get("date", ""),
                                 "source": "propertydata",
+                                "distance_m": int(float(str(t.get("distance", 0))) * 1609),
+                                "property_type": t.get("type", "").replace("_house", "").replace("_", "-"),
                             }
                             for t in filtered if t.get("price")
                         ]
