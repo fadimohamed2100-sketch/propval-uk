@@ -166,6 +166,12 @@ class PropertyDataService:
                     data = resp.json()
                     if data.get("status") == "success":
                         raw = data.get("data", {}).get("raw_data", [])
+                        prices = [float(str(t.get("price", 0))) for t in raw if t.get("price")]
+                        if prices:
+                            avg = sum(prices) / len(prices)
+                            filtered = [t for t in raw if t.get("price") and float(str(t.get("price", 0))) < avg * 3]
+                        else:
+                            filtered = raw
                         return [
                             {
                                 "address": t.get("address", ""),
@@ -174,7 +180,7 @@ class PropertyDataService:
                                 "transaction_date": t.get("date", ""),
                                 "source": "propertydata",
                             }
-                            for t in raw if t.get("price")
+                            for t in filtered if t.get("price")
                         ]
         except Exception as e:
             logger.warning("propertydata_sold_prices_error", error=str(e))
