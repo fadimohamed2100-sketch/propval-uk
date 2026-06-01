@@ -157,8 +157,6 @@ class PropertyDataService:
                 "key": settings.PROPERTYDATA_API_KEY,
                 "postcode": postcode,
             }
-            if property_type and property_type not in ["other", "unknown"]:
-                params["type"] = property_type
             if bedrooms:
                 params["bedrooms"] = bedrooms
             async with httpx.AsyncClient(timeout=15.0) as client:
