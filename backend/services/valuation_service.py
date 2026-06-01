@@ -176,7 +176,7 @@ class ValuationService:
             rental_monthly=result.rental_monthly,
             rental_yield=result.rental_yield,
             methodology=result.methodology,
-            source_apis=["land_registry"] + (["epc"] if epc else []),
+            source_apis=["propertydata"] + (["epc"] if epc else []),
             status="complete",
         )
         self._db.add(report)
