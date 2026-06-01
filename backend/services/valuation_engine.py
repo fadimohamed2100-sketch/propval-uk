@@ -95,6 +95,12 @@ class ValuationEngine:
         subject_floor_area_m2: float | None,
         comps: list[ComparableInput],
     ) -> ValuationResult:
+        # Sort by distance first, keep closest 10 if distances available
+        comps_with_dist = [c for c in comps if c.distance_m is not None]
+        comps_without_dist = [c for c in comps if c.distance_m is None]
+        if comps_with_dist:
+            comps_with_dist.sort(key=lambda c: c.distance_m)
+            comps = comps_with_dist[:10] + comps_without_dist[:5]
         scored = self._score_comps(
             subject_type=subject_type,
             subject_bedrooms=subject_bedrooms,
@@ -209,7 +215,12 @@ class ValuationEngine:
             # Size proximity (± 20% floor area → max bonus)
             if subject_floor_area_m2 and c.floor_area_m2:
                 ratio = c.floor_area_m2 / subject_floor_area_m2
-                score += 0.3 * max(0, 1 - abs(1 - float(ratio)) * 5)
+        score += 0.3 * max(0, 1 - abs(1 - float(ratio)) * 5)
+            # Heavy distance decay - exponential falloff
+            if c.distance_m is not None:
+                import math
+                distance_weight = math.exp(-float(c.distance_m) / 500)  # halves every 500m
+                score *= distance_weight
 
             # Proximity bonus (closer = more similar)
             if c.distance_m is not None:
