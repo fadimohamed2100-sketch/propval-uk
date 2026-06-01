@@ -216,24 +216,24 @@ class ValuationEngine:
             if subject_floor_area_m2 and c.floor_area_m2:
                 ratio = c.floor_area_m2 / subject_floor_area_m2
         score += 0.3 * max(0, 1 - abs(1 - float(ratio)) * 5)
-            # Heavy distance decay - exponential falloff
-            if c.distance_m is not None:
-                import math
-                distance_weight = math.exp(-float(c.distance_m) / 500)  # halves every 500m
-                score *= distance_weight
 
-            # Proximity bonus (closer = more similar)
-            if c.distance_m is not None:
-                if c.distance_m <= 200:
-                    score += 0.25
-                elif c.distance_m <= 500:
-                    score += 0.10
+        # Proximity bonus (closer = more similar)
+        if c.distance_m is not None:
+            if c.distance_m <= 200:
+                score += 0.25
+            elif c.distance_m <= 500:
+                score += 0.10
 
             # Recency bonus
             age_days = (date.today() - sale_date).days
             recency = max(0, 1 - age_days / (365 * self.MAX_COMP_AGE_YEARS))
             score += 0.2 * recency
 
+            # Distance decay - exponential falloff
+            if c.distance_m is not None:
+                import math
+                distance_weight = math.exp(-float(c.distance_m) / 500)
+                score *= distance_weight
             scored.append((c, max(score, 0.01)))
 
         # Sort descending by score, cap at 20 best comps
