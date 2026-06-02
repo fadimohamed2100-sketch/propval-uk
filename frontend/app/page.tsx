@@ -98,7 +98,7 @@ export default function HomePage() {
                 type="text"
                 value={address}
                 onChange={(e) => { setAddress(e.target.value); setError(null); }}
-                placeholder="Enter a UK address or postcode…"
+                placeholder="e.g. 15 Victoria Street, Edinburgh, EH1 2JL"
                 className="flex-1 py-5 pl-14 pr-4 text-base md:text-lg bg-transparent outline-none placeholder:text-ink-faint rounded-2xl"
                 disabled={loading}
                 autoComplete="off"
@@ -116,6 +116,7 @@ export default function HomePage() {
               </button>
             </div>
 
+            <p style={{fontSize: 12, color: "#999", fontFamily: "sans-serif", marginBottom: 8, paddingLeft: 4}}>Tip: use street name + postcode. For flats, skip the flat number e.g. "Kingsman Street, SE18 5QH"</p>
             {error && <p className="mb-3 text-sm text-red-500 pl-1">{error}</p>}
 
             <button
