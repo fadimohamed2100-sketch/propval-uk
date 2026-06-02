@@ -114,8 +114,6 @@ async def run_valuation(
         tenure=body.tenure,
         lease_years=body.lease_years,
     )
-    # Explicitly refresh to load relationships
-    await db.refresh(report, ["property"])
     return _serialise_valuation(report, include_property=True)
 
 
