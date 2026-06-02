@@ -169,7 +169,7 @@ class ValuationService:
         try:
             result = self._engine.run(
                 subject_type=property_.property_type,
-                subject_bedrooms=property_.bedrooms,
+                subject_bedrooms=effective_bedrooms or property_.bedrooms,
                 subject_floor_area_m2=property_.floor_area_m2,
                 comps=comp_inputs,
             )
