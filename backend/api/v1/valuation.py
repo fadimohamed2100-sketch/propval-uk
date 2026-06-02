@@ -70,7 +70,8 @@ def _serialise_valuation(report, *, include_property: bool = False):
                 }
             else:
                 base["property"] = None
-        except Exception:
+        except Exception as e:
+            logger.warning("property_serialise_error", error=str(e))
             base["property"] = None
         base["methodology"] = report.methodology or {}
         return ValuationDetailOut.model_validate(base)
