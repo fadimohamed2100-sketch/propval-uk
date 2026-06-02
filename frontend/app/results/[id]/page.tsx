@@ -50,7 +50,7 @@ export default function ResultsPage() {
   const prop = data.property;
   const method = data.methodology || {};
   const comps = data.comparables || [];
-  const address = prop?.address?.display_address || prop?.address?.address_norm || "Property";
+  const address = method.address_norm || prop?.address?.display_address || prop?.address?.address_norm || "Property";
 
   return (
     <main style={{ background: "#faf9f6", minHeight: "100vh", fontFamily: "'Georgia', serif" }}>
