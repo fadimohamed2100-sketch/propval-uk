@@ -204,7 +204,7 @@ class PropertyDataService:
             logger.warning("propertydata_sold_prices_error", error=str(e))
         return []
 
-    async def get_propertydata_rent(self, postcode: str, property_type: str, bedrooms: int | None) -> dict | None:
+    async def get_propertydata_rent(self, postcode: str, bedrooms: int | None) -> dict | None:
         """Call PropertyData /valuation-rent endpoint."""
         if not settings.PROPERTYDATA_API_KEY:
             return None
@@ -212,12 +212,11 @@ class PropertyDataService:
             params = {
                 "key": settings.PROPERTYDATA_API_KEY,
                 "postcode": postcode,
-                "type": property_type,
                 "bedrooms": str(bedrooms) if bedrooms else None,
             }
             params = {k: v for k, v in params.items() if v is not None}
             async with httpx.AsyncClient(timeout=15.0) as client:
-                resp = await client.get("https://api.propertydata.co.uk/valuation-rent", params=params)
+                resp = await client.get("https://api.propertydata.co.uk/rents", params=params)
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get("status") == "success":
