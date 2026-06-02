@@ -171,6 +171,25 @@ class ValuationService:
         except ValueError as exc:
             raise ValuationFailedError(str(exc))
 
+        # Apply lease years adjustment if leasehold
+        lease_adjustment = 1.0
+        if tenure == "leasehold" and lease_years:
+            if lease_years >= 90:
+                lease_adjustment = 1.0
+            elif lease_years >= 80:
+                lease_adjustment = 0.95
+            elif lease_years >= 70:
+                lease_adjustment = 0.90
+            elif lease_years >= 60:
+                lease_adjustment = 0.85
+            elif lease_years >= 50:
+                lease_adjustment = 0.75
+            else:
+                lease_adjustment = 0.60
+            result.estimated_value = int(result.estimated_value * lease_adjustment)
+            result.range_low = int(result.range_low * lease_adjustment)
+            result.range_high = int(result.range_high * lease_adjustment)
+
         # Persist ValuationReport
         report = ValuationReport(
             property_id=property_.id,
