@@ -156,7 +156,9 @@ class ValuationService:
 
         # Get PropertyData direct valuation (primary)
         pd_valuation = await self._property_data.get_propertydata_valuation(
-            address.postcode, property_.bedrooms, property_.floor_area_m2,
+            address.postcode, pd_property_type,
+            bedrooms=effective_bedrooms or property_.bedrooms,
+            floor_area_m2=property_.floor_area_m2,
             bathrooms=bathrooms, condition=condition, parking=parking, outdoor_space=outdoor_space
         )
         pd_rent = await self._property_data.get_propertydata_rent(
