@@ -52,21 +52,19 @@ def _serialise_valuation(report, *, include_property: bool = False):
     if include_property:
         try:
             prop = report.property
-            if prop:
+            if prop and prop.address:
                 base["property"] = {
-                    "id": prop.id,
-                    "address_id": prop.address_id,
+                    "id": str(prop.id),
                     "property_type": prop.property_type,
                     "bedrooms": prop.bedrooms,
                     "bathrooms": prop.bathrooms,
-                    "floor_area_m2": prop.floor_area_m2,
+                    "floor_area_m2": float(prop.floor_area_m2) if prop.floor_area_m2 else None,
                     "epc_rating": prop.epc_rating,
                     "address": {
-                        "id": prop.address.id,
                         "address_norm": prop.address.address_norm,
                         "postcode": prop.address.postcode,
                         "display_address": prop.address.address_norm,
-                    } if prop.address else None,
+                    },
                 }
             else:
                 base["property"] = None
