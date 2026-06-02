@@ -31,7 +31,7 @@ export default function HomePage() {
   const [tenure, setTenure] = useState("");
   const [leaseYears, setLeaseYears] = useState("");
   const [condition, setCondition] = useState("");
-  const [parking, setParking] = useState("none");
+  const [driveway, setDriveway] = useState(false);
   const [outdoorSpace, setOutdoorSpace] = useState("none");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,7 +49,7 @@ export default function HomePage() {
       if (tenure) payload.tenure = tenure;
       if (leaseYears) payload.lease_years = parseInt(leaseYears);
       if (condition) payload.condition = condition;
-      if (parking) payload.parking = parking;
+      if (driveway) payload.parking = "single";
       if (outdoorSpace) payload.outdoor_space = outdoorSpace;
       const result = await runValuation(payload);
       router.push(`/results/${result.id}`);
@@ -184,13 +184,15 @@ export default function HomePage() {
                     />
                   </div>
                 )}
-                <div>
-                  <label className={labelClass}>Parking</label>
-                  <select value={parking} onChange={e => setParking(e.target.value)} className={selectClass}>
-                    <option value="none">None</option>
-                    <option value="single">Single</option>
-                    <option value="double">Double</option>
-                  </select>
+                <div className="flex items-center gap-3 pt-5">
+                  <input
+                    type="checkbox"
+                    id="driveway"
+                    checked={driveway}
+                    onChange={e => setDriveway(e.target.checked)}
+                    className="w-4 h-4 accent-stone-800 cursor-pointer"
+                  />
+                  <label htmlFor="driveway" className={labelClass + " mb-0 cursor-pointer"}>Has Driveway</label>
                 </div>
                 <div>
                   <label className={labelClass}>Outdoor Space</label>
