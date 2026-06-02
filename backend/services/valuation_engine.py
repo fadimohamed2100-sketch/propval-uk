@@ -229,11 +229,6 @@ class ValuationEngine:
             recency = max(0, 1 - age_days / (365 * self.MAX_COMP_AGE_YEARS))
             score += 0.2 * recency
 
-            # Distance decay - exponential falloff
-            if c.distance_m is not None:
-                import math
-                distance_weight = max(0.1, math.exp(-float(c.distance_m) / 2000))
-                score *= distance_weight
             scored.append((c, max(score, 0.01)))
 
         # Sort descending by score, cap at 20 best comps
