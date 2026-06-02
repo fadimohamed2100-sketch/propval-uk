@@ -104,12 +104,12 @@ class ValuationService:
                 property_.property_type = property_type
         if not property_:
             property_ = await self._create_property(address, epc)
-        elif epc:
+        if property_:
             if bedrooms:
                 property_.bedrooms = bedrooms
-            elif not property_.bedrooms and epc.get("bedrooms"):
+            elif epc and not property_.bedrooms:
                 property_.bedrooms = epc.get("bedrooms")
-            if not property_.floor_area_m2:
+            if epc and not property_.floor_area_m2:
                 property_.floor_area_m2 = epc.get("floor_area_m2")
                 property_.epc_rating = epc.get("epc_rating")
 
