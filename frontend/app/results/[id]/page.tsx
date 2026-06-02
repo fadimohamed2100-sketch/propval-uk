@@ -106,7 +106,7 @@ export default function ResultsPage() {
           <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, letterSpacing: "-0.01em" }}>Property Details</h2>
           <div className="grid3">
             <div><p className="label">Property Type</p><p className="value" style={{ textTransform: "capitalize" }}>{method.subject_type || prop?.property_type || "—"}</p></div>
-            <div><p className="label">Bedrooms</p><p className="value">{method.subject_bedrooms || prop?.bedrooms || "—"}</p></div>
+            <div><p className="label">Bedrooms</p><p className="value">{method.subject_bedrooms ?? prop?.bedrooms ?? "—"}</p></div>
             <div><p className="label">Floor Area</p><p className="value">{method.subject_floor_area_m2 ? `${method.subject_floor_area_m2} m²` : "—"}</p></div>
             <div><p className="label">EPC Rating</p><p className="value">{prop?.epc_rating || "—"}</p></div>
             <div><p className="label">Comparables Used</p><p className="value">{method.comps_used} of {method.comps_considered}</p></div>
