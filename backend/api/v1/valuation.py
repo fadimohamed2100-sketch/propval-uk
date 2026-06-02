@@ -51,7 +51,25 @@ def _serialise_valuation(report, *, include_property: bool = False):
 
     if include_property:
         try:
-            base["property"] = report.property
+            prop = report.property
+            if prop:
+                base["property"] = {
+                    "id": prop.id,
+                    "address_id": prop.address_id,
+                    "property_type": prop.property_type,
+                    "bedrooms": prop.bedrooms,
+                    "bathrooms": prop.bathrooms,
+                    "floor_area_m2": prop.floor_area_m2,
+                    "epc_rating": prop.epc_rating,
+                    "address": {
+                        "id": prop.address.id,
+                        "address_norm": prop.address.address_norm,
+                        "postcode": prop.address.postcode,
+                        "display_address": prop.address.address_norm,
+                    } if prop.address else None,
+                }
+            else:
+                base["property"] = None
         except Exception:
             base["property"] = None
         base["methodology"] = report.methodology or {}
