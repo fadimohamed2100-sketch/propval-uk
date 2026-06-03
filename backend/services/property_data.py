@@ -191,7 +191,7 @@ class PropertyDataService:
                         return [
                             {
                                 "address": t.get("address", ""),
-                                "postcode": t.get("postcode", postcode),
+                                "postcode": __import__("re").search(r"[A-Z]{1,2}[0-9][0-9A-Z]?\s[0-9][A-Z]{2}", t.get("address", "").upper()) and __import__("re").search(r"[A-Z]{1,2}[0-9][0-9A-Z]?\s[0-9][A-Z]{2}", t.get("address", "").upper()).group() or postcode,
                                 "price_pence": int(float(str(t.get("price", 0)))) * 100,
                                 "transaction_date": t.get("date", ""),
                                 "source": "propertydata",
