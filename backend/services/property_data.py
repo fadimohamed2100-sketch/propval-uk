@@ -181,8 +181,8 @@ class PropertyDataService:
                             if type_filtered:
                                 no_new_builds = type_filtered
                         if pd_average:
-                            low = pd_average * 0.5
-                            high = pd_average * 1.6
+                            low = pd_average * 0.65
+                            high = pd_average * 1.4
                             filtered = [t for t in no_new_builds if t.get("price") and low <= float(str(t.get("price", 0))) <= high]
                             if not filtered:
                                 filtered = no_new_builds
