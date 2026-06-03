@@ -180,7 +180,7 @@ class ValuationService:
         if pd_rent:
             weekly = pd_rent.get("data", {}).get("long_let", {}).get("average", 0)
             if weekly:
-                result.rental_monthly = int(weekly * 52 / 12)
+                result.rental_monthly = int(weekly * 52 / 12) * 100
                 if result.estimated_value > 0:
                     result.rental_yield = round((result.rental_monthly * 12 / result.estimated_value) * 100, 1)
 
