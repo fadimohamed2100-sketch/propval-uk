@@ -114,6 +114,7 @@ class ValuationService:
                 property_.epc_rating = epc.get("epc_rating")
 
         # Return cached valuation unless force_refresh
+        effective_bedrooms = bedrooms or property_.bedrooms
         if not force_refresh:
             cached = await self._fresh_valuation(property_.id, bedrooms=effective_bedrooms, property_type=property_.property_type, tenure=tenure)
             if cached:
@@ -123,7 +124,6 @@ class ValuationService:
         # Fetch comparables — PropertyData first, then seeded DB
         pd_type_map = {"flat": "flat", "terraced": "terraced", "semi_detached": "semi-detached", "detached": "detached", "other": "terraced"}
         pd_property_type = pd_type_map.get(property_.property_type or "other", "terraced")
-        effective_bedrooms = bedrooms or property_.bedrooms
         raw_sales = await self._property_data.get_propertydata_sold_prices(address.postcode, pd_property_type, bedrooms=effective_bedrooms, tenure=tenure)
         if not raw_sales:
             from sqlalchemy import text
