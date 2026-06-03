@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, MapPin, TrendingUp, Building2, Sparkles, ChevronDown } from "lucide-react";
+import { Search, MapPin, TrendingUp, Building2, Sparkles } from "lucide-react";
 import { runValuation } from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
 
@@ -118,16 +118,7 @@ export default function HomePage() {
             <p style={{fontSize: 12, color: "#999", fontFamily: "sans-serif", marginBottom: 8, paddingLeft: 4}}>Tip: use street name + postcode. For flats, skip the flat number e.g. "Kingsman Street, SE18 5QH"</p>
             {error && <p className="mb-3 text-sm text-red-500 pl-1">{error}</p>}
 
-            <button
-              type="button"
-              onClick={() => setShowExtra(!showExtra)}
-              className="flex items-center gap-2 text-xs text-ink-muted hover:text-ink transition-colors mb-3 pl-1"
-            >
-              <ChevronDown size={14} className={`transition-transform ${showExtra ? "rotate-180" : ""}`} />
-              {showExtra ? "Hide details" : "Improve accuracy — add property details"}
-            </button>
-
-            {showExtra && (
+            (
               <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-3 grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className={labelClass}>Property Type</label>
