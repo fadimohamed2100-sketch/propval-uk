@@ -176,6 +176,14 @@ class ValuationService:
         except ValueError as exc:
             raise ValuationFailedError(str(exc))
 
+        # Apply PropertyData rental estimate if available
+        if pd_rent:
+            weekly = pd_rent.get("data", {}).get("long_let", {}).get("average", 0)
+            if weekly:
+                result.rental_monthly = int(weekly * 52 / 12)
+                if result.estimated_value > 0:
+                    result.rental_yield = round((result.rental_monthly * 12 / result.estimated_value) * 100, 1)
+
         # Apply lease years adjustment if leasehold
         lease_adjustment = 1.0
         if tenure == "leasehold" and lease_years:
