@@ -24,7 +24,6 @@ export default function HomePage() {
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showExtra, setShowExtra] = useState(false);
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [propertyType, setPropertyType] = useState("");
@@ -204,7 +203,7 @@ export default function HomePage() {
                   </select>
                 </div>
               </div>
-            )}
+            </div>
 
             <div className="flex flex-wrap gap-2 pl-1">
               {EXAMPLE_ADDRESSES.map((addr) => (
