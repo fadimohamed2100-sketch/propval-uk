@@ -118,8 +118,7 @@ export default function HomePage() {
             <p style={{fontSize: 12, color: "#999", fontFamily: "sans-serif", marginBottom: 8, paddingLeft: 4}}>Tip: use street name + postcode. For flats, skip the flat number e.g. "Kingsman Street, SE18 5QH"</p>
             {error && <p className="mb-3 text-sm text-red-500 pl-1">{error}</p>}
 
-            (
-              <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-3 grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-3 grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className={labelClass}>Property Type</label>
                   <select value={propertyType} onChange={e => setPropertyType(e.target.value)} className={selectClass}>
