@@ -117,7 +117,7 @@ export default function HomePage() {
               </button>
             </div>
 
-            <p style={{fontSize: 12, color: "#999", fontFamily: "sans-serif", marginBottom: 8, paddingLeft: 4}}>Tip: use street name + postcode. For flats, skip the flat number e.g. "Kingsman Street, SE18 5QH"</p>
+            <div style={{display: "flex", alignItems: "center", gap: 8, background: "#fef9ec", border: "1px solid #f5e4a0", borderRadius: 10, padding: "10px 14px", marginBottom: 12}}><span style={{fontSize: 16}}>💡</span><p style={{fontSize: 13, color: "#7a6a1a", fontFamily: "sans-serif", margin: 0}}>Use street name + postcode. For flats, skip the flat number — e.g. <strong>Kingsman Street, SE18 5QH</strong></p></div>
             {error && <p className="mb-3 text-sm text-red-500 pl-1">{error}</p>}
 
             <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-3 grid grid-cols-2 md:grid-cols-3 gap-4">
