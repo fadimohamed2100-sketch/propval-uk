@@ -38,6 +38,8 @@ export default function HomePage() {
     e?.preventDefault();
     const query = (overrideAddress ?? address).trim();
     if (!query) { inputRef.current?.focus(); return; }
+    if (!propertyType) { setError("Please select a property type."); return; }
+    if (!bedrooms) { setError("Please select the number of bedrooms."); return; }
     setLoading(true);
     setError(null);
     try {
