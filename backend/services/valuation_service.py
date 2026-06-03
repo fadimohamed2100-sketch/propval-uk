@@ -162,7 +162,7 @@ class ValuationService:
             bathrooms=bathrooms, condition=condition, parking=parking, outdoor_space=outdoor_space
         )
         pd_rent = await self._property_data.get_propertydata_rent(
-            address.postcode, property_.bedrooms
+            address.postcode, effective_bedrooms or property_.bedrooms
         )
 
         # Run the engine
