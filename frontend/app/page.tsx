@@ -193,7 +193,6 @@ export default function HomePage() {
                   </select>
                 </div>
               </div>
-            </div>
 
             <div className="flex flex-wrap gap-2 pl-1">
               {EXAMPLE_ADDRESSES.map((addr) => (
