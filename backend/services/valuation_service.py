@@ -115,7 +115,7 @@ class ValuationService:
 
         # Return cached valuation unless force_refresh
         if not force_refresh:
-            cached = await self._fresh_valuation(property_.id)
+            cached = await self._fresh_valuation(property_.id, bedrooms=effective_bedrooms, property_type=property_.property_type, tenure=tenure)
             if cached:
                 logger.info("valuation_cache_hit", property_id=str(property_.id))
                 return cached
@@ -272,15 +272,20 @@ class ValuationService:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
-    async def _fresh_valuation(self, property_id: uuid.UUID) -> ValuationReport | None:
+    async def _fresh_valuation(self, property_id: uuid.UUID, bedrooms: int | None = None, property_type: str | None = None, tenure: str | None = None) -> ValuationReport | None:
         now = datetime.now(timezone.utc)
+        filters = [
+            ValuationReport.property_id == property_id,
+            ValuationReport.status == "complete",
+            ValuationReport.expires_at > now,
+        ]
+        if bedrooms:
+            filters.append(ValuationReport.methodology["subject_bedrooms"].astext == str(bedrooms))
+        if property_type:
+            filters.append(ValuationReport.methodology["subject_type"].astext == property_type)
         stmt = (
             select(ValuationReport)
-            .where(
-                ValuationReport.property_id == property_id,
-                ValuationReport.status == "complete",
-                ValuationReport.expires_at > now,
-            )
+            .where(*filters)
             .options(
                 selectinload(ValuationReport.comparables),
                 selectinload(ValuationReport.property).selectinload(Property.address),
