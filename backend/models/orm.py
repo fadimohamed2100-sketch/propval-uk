@@ -294,6 +294,7 @@ class Comparable(Base):
     distance_m: Mapped[int | None] = mapped_column(Integer)
     similarity_score: Mapped[float | None] = mapped_column(Numeric(4, 3))
     adjustment_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))
+    source_url: Mapped[str | None] = mapped_column(Text)
     source: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_now

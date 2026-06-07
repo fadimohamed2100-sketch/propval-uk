@@ -197,6 +197,7 @@ class PropertyDataService:
                                 "source": "propertydata",
                                 "distance_m": int(float(str(t.get("distance", 0))) * 1609),
                                 "property_type": t.get("type", "").replace("_house", "").replace("_", "-"),
+                                "source_url": t.get("url", ""),
                             }
                             for t in filtered if t.get("price")
                         ]

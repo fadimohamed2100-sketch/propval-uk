@@ -127,6 +127,7 @@ class ComparableOut(_OrmBase):
     distance_m: int | None
     similarity_score: float | None
     adjustment_pct: float | None
+    source_url: str | None = None
     source: str
 
     @classmethod

@@ -131,7 +131,7 @@ export default function ResultsPage() {
                 <tbody>
                   {comps.map((c: any) => (
                     <tr key={c.id}>
-                      <td style={{ textTransform: "capitalize" }}>{c.address_snapshot}</td>
+                      <td style={{ textTransform: "capitalize" }}>{c.source_url ? <a href={c.source_url} target="_blank" rel="noopener noreferrer" style={{ color: "#1a1a1a", textDecoration: "underline" }}>{c.address_snapshot}</a> : c.address_snapshot}</td>
                       <td style={{ fontFamily: "monospace", fontSize: 13 }}>{c.postcode_snapshot}</td>
                       <td style={{ fontWeight: 600 }}>{fmt(c.sale_price_gbp)}</td>
                       <td style={{ color: "#888", fontSize: 13 }}>{c.sale_date ? new Date(c.sale_date).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "—"}</td>

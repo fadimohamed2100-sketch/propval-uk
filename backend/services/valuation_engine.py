@@ -51,6 +51,7 @@ class ComparableInput:
     bedrooms: int | None = None
     floor_area_m2: float | None = None
     distance_m: int | None = None
+    source_url: str | None = None
     source: str = "land_registry"
 
 
@@ -142,6 +143,7 @@ class ValuationEngine:
                 "similarity_score": round(score, 3),
                 "adjustment_pct": None,
                 "source": c.source,
+                "source_url": getattr(c, "source_url", None),
             }
             for c, score in scored
         ]
