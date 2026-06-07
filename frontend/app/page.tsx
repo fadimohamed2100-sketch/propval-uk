@@ -135,15 +135,23 @@ export default function HomePage() {
                   <label className={labelClass}>Bedrooms</label>
                   <select value={bedrooms} onChange={e => setBedrooms(e.target.value)} className={selectClass}>
                     <option value="">Unknown</option>
-                    {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}{n===5?"+":""}</option>)}
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n}</option>)}
+                    <option value="custom">12+</option>
                   </select>
+                  {bedrooms === "custom" && (
+                    <input type="number" min="13" placeholder="Enter bedrooms" className={selectClass + " mt-2"} onChange={e => setBedrooms(e.target.value)} />
+                  )}
                 </div>
                 <div>
                   <label className={labelClass}>Bathrooms</label>
                   <select value={bathrooms} onChange={e => setBathrooms(e.target.value)} className={selectClass}>
                     <option value="">Unknown</option>
-                    {[1,2,3].map(n => <option key={n} value={n}>{n}{n===3?"+":""}</option>)}
+                    {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
+                    <option value="custom">8+</option>
                   </select>
+                  {bathrooms === "custom" && (
+                    <input type="number" min="9" placeholder="Enter bathrooms" className={selectClass + " mt-2"} onChange={e => setBathrooms(e.target.value)} />
+                  )}
                 </div>
                 <div>
                   <label className={labelClass}>Condition</label>
