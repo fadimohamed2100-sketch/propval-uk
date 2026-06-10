@@ -161,6 +161,8 @@ class PropertyDataService:
                 params["bedrooms"] = bedrooms
             if tenure:
                 params["tenure"] = tenure
+            if property_type and property_type in ["flat", "terraced", "semi-detached", "detached"]:
+                params["type"] = property_type
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.get("https://api.propertydata.co.uk/sold-prices", params=params)
                 logger.info("propertydata_sold_prices_response", status=resp.status_code, body=resp.text[:200])
