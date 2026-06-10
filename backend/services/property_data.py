@@ -173,6 +173,28 @@ class PropertyDataService:
                         no_new_builds = [t for t in raw if t.get("class") != "new_build"]
                         if not no_new_builds:
                             no_new_builds = raw
+                        # Apply date filter: within 0.3 miles keep 4 years, beyond keep 18 months
+                        from datetime import date, timedelta
+                        cutoff_near = date.today() - timedelta(days=365 * 4)
+                        cutoff_far = date.today() - timedelta(days=548)
+                        def keep_by_date(t):
+                            d = t.get("distance", 999)
+                            try:
+                                dist = float(str(d))
+                            except:
+                                dist = 999
+                            sale_date_str = t.get("date", "")
+                            try:
+                                sale_date = date.fromisoformat(sale_date_str[:10])
+                            except:
+                                return True
+                            if dist <= 0.3:
+                                return sale_date >= cutoff_near
+                            else:
+                                return sale_date >= cutoff_far
+                        no_new_builds = [t for t in no_new_builds if keep_by_date(t)]
+                        if not no_new_builds:
+                            no_new_builds = raw
                         # Filter by property type if known
                         if property_type and property_type not in ["other", "unknown", ""]:
                             type_map = {"flat": "flat", "terraced": "terraced_house", "semi-detached": "semi-detached_house", "detached": "detached_house"}
