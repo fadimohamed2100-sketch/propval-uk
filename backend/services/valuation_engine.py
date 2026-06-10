@@ -219,15 +219,20 @@ class ValuationEngine:
                 ratio = c.floor_area_m2 / subject_floor_area_m2
                 score += 0.3 * max(0, 1 - abs(1 - float(ratio)) * 5)
 
-            # Proximity bonus (closer = more similar)
+            # Proximity bonus (closer = more similar) - heavily weighted
             if c.distance_m is not None:
                 if c.distance_m <= 200:
-                    score += 0.25
+                    score += 0.8
                 elif c.distance_m <= 500:
-                    score += 0.10
-
-            # Recency bonus
+                    score += 0.5
+                elif c.distance_m <= 800:
+                    score += 0.3
+                elif c.distance_m <= 1600:
+                    score += 0.1
+            # Recency bonus - less weight than proximity
             age_days = (date.today() - sale_date).days
+            recency = max(0, 1 - age_days / (365 * self.MAX_COMP_AGE_YEARS))
+            score += 0.15 * recency
             recency = max(0, 1 - age_days / (365 * self.MAX_COMP_AGE_YEARS))
             score += 0.2 * recency
 
