@@ -114,21 +114,21 @@ class PropertyDataService:
             import re as _re
             num_match = _re.search(r"\d+", line_1)
             target_num = num_match.group() if num_match else None
-            target_words = set(_re.findall(r"[a-zA-Z]+", line_1.lower()))
+            target_words = set(_re.findall(r"[a-zA-Z]+", line_1.lower())) - {"road", "street", "avenue", "lane", "close", "drive", "way", "court"}
             best = None
             best_score = -1
-            for r in rows:
-                addr = (r.get("address") or "").lower()
-                score = 0
-                if target_num and _re.search(r"\b" + target_num + r"\b", addr):
-                    score += 2
-                addr_words = set(_re.findall(r"[a-zA-Z]+", addr))
-                score += len(target_words & addr_words)
-                if score > best_score:
-                    best_score = score
-                    best = r
-            if best is not None and best_score > 0:
-                row = best
+            if target_num:
+                for r in rows:
+                    addr = (r.get("address") or "").lower()
+                    if not _re.search(r"\b" + target_num + r"\b", addr):
+                        continue
+                    addr_words = set(_re.findall(r"[a-zA-Z]+", addr)) - {"road", "street", "avenue", "lane", "close", "drive", "way", "court"}
+                    score = len(target_words & addr_words)
+                    if score > best_score:
+                        best_score = score
+                        best = r
+                if best is not None:
+                    row = best
         return {
             "floor_area_m2": float(row.get("total-floor-area", 0) or 0) or None,
             "epc_rating": (row.get("current-energy-rating") or "")[:1].upper() or None,

@@ -140,6 +140,19 @@ class ValuationService:
                 {"address": r[0], "postcode": r[1], "price_pence": int(r[2]), "transaction_date": r[3].isoformat() if hasattr(r[3], "isoformat") else str(r[3]), "source": r[5]}
                 for r in result.fetchall()
             ]
+        # Filter comparables to match the selected property type, if known
+        if property_.property_type and property_.property_type != "other":
+            type_aliases = {
+                "terraced": {"terraced", "terrace"},
+                "semi_detached": {"semi-detached", "semi_detached", "semi"},
+                "detached": {"detached"},
+                "flat": {"flat", "apartment", "maisonette"},
+            }
+            allowed = type_aliases.get(property_.property_type, {property_.property_type})
+            filtered_sales = [s for s in raw_sales if (s.get("property_type") or "").lower().replace(" ", "_") in allowed]
+            if filtered_sales:
+                raw_sales = filtered_sales
+
         comp_inputs = [
             ComparableInput(
                 address=s["address"],
