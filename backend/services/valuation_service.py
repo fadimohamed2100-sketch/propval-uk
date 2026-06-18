@@ -92,7 +92,7 @@ class ValuationService:
         address, property_ = await self.resolve_address(raw_address)
 
         # Enrich property from EPC if we have one
-        epc = await self._property_data.get_epc_data(address.postcode)
+        epc = await self._property_data.get_epc_data(address.postcode, line_1=address.line_1)
 
         # Override EPC data with user-provided values if available
         if bedrooms and epc:

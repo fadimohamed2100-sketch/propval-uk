@@ -86,15 +86,16 @@ class PropertyDataService:
     # EPC — energy certificate for an address
     # ------------------------------------------------------------------
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(min=1, max=4), reraise=True)
-    async def get_epc_data(self, postcode: str) -> dict | None:
+    async def get_epc_data(self, postcode: str, line_1: str | None = None) -> dict | None:
         """
-        Returns the most recent EPC record for a postcode, or None.
+        Returns the EPC record for a postcode, matched against line_1 (street/building
+        number) where possible, falling back to most recent if no match found.
             {floor_area_m2, epc_rating, property_type, inspection_date}
         """
         try:
             resp = await self._epc_client.get(
                 "/domestic/search",
-                params={"postcode": postcode, "size": 1},
+                params={"postcode": postcode, "size": 50},
             )
             if resp.status_code == 404:
                 return None
@@ -102,15 +103,32 @@ class PropertyDataService:
         except httpx.HTTPStatusError as exc:
             logger.warning("epc_api_error", status=exc.response.status_code)
             return None  # EPC is best-effort; don't block the valuation
-
         try:
             rows = resp.json().get("rows", [])
         except Exception:
             rows = []
         if not rows:
             return None
-
         row = rows[0]
+        if line_1:
+            import re as _re
+            num_match = _re.search(r"\d+", line_1)
+            target_num = num_match.group() if num_match else None
+            target_words = set(_re.findall(r"[a-zA-Z]+", line_1.lower()))
+            best = None
+            best_score = -1
+            for r in rows:
+                addr = (r.get("address") or "").lower()
+                score = 0
+                if target_num and _re.search(r"\b" + target_num + r"\b", addr):
+                    score += 2
+                addr_words = set(_re.findall(r"[a-zA-Z]+", addr))
+                score += len(target_words & addr_words)
+                if score > best_score:
+                    best_score = score
+                    best = r
+            if best is not None and best_score > 0:
+                row = best
         return {
             "floor_area_m2": float(row.get("total-floor-area", 0) or 0) or None,
             "epc_rating": (row.get("current-energy-rating") or "")[:1].upper() or None,
