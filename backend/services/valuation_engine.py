@@ -126,6 +126,11 @@ class ValuationEngine:
             point_estimate, subject_type
         )
 
+        # Order display list by proximity (closest first); unmatched distance goes last
+        scored_for_display = sorted(
+            scored,
+            key=lambda x: (x[0].distance_m if x[0].distance_m is not None else float("inf"))
+        )
         comps_out = [
             {
                 "address_snapshot": c.address,
@@ -145,7 +150,7 @@ class ValuationEngine:
                 "source": c.source,
                 "source_url": getattr(c, "source_url", None),
             }
-            for c, score in scored
+            for c, score in scored_for_display
         ]
 
         methodology = {
