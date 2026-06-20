@@ -174,6 +174,8 @@ class PropertyDataService:
             params = {
                 "key": settings.PROPERTYDATA_API_KEY,
                 "postcode": postcode,
+                "max_age": 48,
+                "points": 100,
             }
             if bedrooms:
                 params["bedrooms"] = bedrooms
