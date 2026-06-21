@@ -268,6 +268,42 @@ class PropertyDataService:
             logger.warning("propertydata_rent_error", error=str(e))
         return None
 
+    # ------------------------------------------------------------------
+    # Homedata — address lookup (UPRN) and enriched property retrieval
+    # ------------------------------------------------------------------
+    async def get_homedata_addresses_by_postcode(self, postcode: str) -> list[dict]:
+        """List all addresses (with UPRN) at a postcode via Homedata."""
+        if not settings.HOMEDATA_API_KEY:
+            return []
+        try:
+            clean_postcode = postcode.replace(" ", "")
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(
+                    f"https://api.homedata.co.uk/api/address/postcode/{clean_postcode}/",
+                    headers={"Authorization": f"Api-Key {settings.HOMEDATA_API_KEY}"},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return data.get("addresses", [])
+        except Exception as e:
+            logger.warning("homedata_postcode_error", error=str(e))
+        return []
+    async def get_homedata_property(self, uprn: str | int) -> dict | None:
+        """Retrieve enriched property record (EPC, floor area, bedrooms, last sold) by UPRN."""
+        if not settings.HOMEDATA_API_KEY:
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(
+                    f"https://api.homedata.co.uk/api/address/retrieve/{uprn}/",
+                    params={"level": "full"},
+                    headers={"Authorization": f"Api-Key {settings.HOMEDATA_API_KEY}"},
+                )
+                if resp.status_code == 200:
+                    return resp.json()
+        except Exception as e:
+            logger.warning("homedata_retrieve_error", error=str(e))
+        return None
     async def close(self) -> None:
         await self._lr_client.aclose()
         await self._epc_client.aclose()

@@ -103,6 +103,7 @@ async def run_valuation(
         tenure=body.tenure,
         lease_years=body.lease_years,
         unit_identifier=body.unit_identifier,
+        uprn=body.uprn,
     )
     return _serialise_valuation(report, include_property=True)
 

@@ -89,12 +89,28 @@ class ValuationService:
         tenure: str | None = None,
         lease_years: int | None = None,
         unit_identifier: str | None = None,
+        uprn: str | None = None,
     ) -> ValuationReport:
         address, property_ = await self.resolve_address(raw_address)
-
-        # Enrich property from EPC if we have one
-        epc_match_line = f"{unit_identifier} {address.line_1}" if unit_identifier else address.line_1
-        epc = await self._property_data.get_epc_data(address.postcode, line_1=epc_match_line)
+        # Enrich property: prefer Homedata UPRN lookup (exact match) if available,
+        # otherwise fall back to EPC postcode + address-line matching.
+        epc = None
+        last_sold_price = None
+        last_sold_date = None
+        if uprn:
+            hd = await self._property_data.get_homedata_property(uprn)
+            if hd:
+                epc = {
+                    "floor_area_m2": hd.get("epc_floor_area") or hd.get("floor_area_sqm"),
+                    "epc_rating": hd.get("epc_rating") or hd.get("current_energy_rating"),
+                    "property_type": (hd.get("property_type") or "").lower().replace(" ", "_") or None,
+                    "bedrooms": hd.get("bedrooms"),
+                }
+                last_sold_price = hd.get("last_sold_price") or hd.get("price")
+                last_sold_date = hd.get("last_sold_date") or hd.get("sold_date")
+        if not epc:
+            epc_match_line = f"{unit_identifier} {address.line_1}" if unit_identifier else address.line_1
+            epc = await self._property_data.get_epc_data(address.postcode, line_1=epc_match_line)
 
         # Override EPC data with user-provided values if available
         if bedrooms and epc:
@@ -220,6 +236,11 @@ class ValuationService:
             result.range_low = int(result.range_low * lease_adjustment)
             result.range_high = int(result.range_high * lease_adjustment)
 
+        # Inject previous sale info (from Homedata UPRN lookup) into methodology, if available
+        methodology = dict(result.methodology)
+        if last_sold_price:
+            methodology["previous_sale_price_pence"] = int(float(last_sold_price) * 100) if isinstance(last_sold_price, (int, float)) else last_sold_price
+            methodology["previous_sale_date"] = str(last_sold_date) if last_sold_date else None
         # Persist ValuationReport
         report = ValuationReport(
             property_id=property_.id,
@@ -230,8 +251,8 @@ class ValuationService:
             confidence_score=result.confidence_score,
             rental_monthly=result.rental_monthly,
             rental_yield=result.rental_yield,
-            methodology=result.methodology,
-            source_apis=["propertydata"] + (["epc"] if epc else []),
+            methodology=methodology,
+            source_apis=["propertydata"] + (["epc"] if epc else []) + (["homedata"] if uprn else []),
             status="complete",
         )
         self._db.add(report)

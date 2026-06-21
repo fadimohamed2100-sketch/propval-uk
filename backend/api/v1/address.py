@@ -3,8 +3,29 @@ from fastapi import APIRouter, Depends
 from api.deps import get_valuation_service
 from schemas.schemas import AddressSearchRequest, AddressSearchResponse, AddressOut, PropertyOut
 from services.valuation_service import ValuationService
+from services.property_data import PropertyDataService
 
 router = APIRouter(prefix="/address", tags=["Address"])
+
+
+def get_property_data_service() -> PropertyDataService:
+    return PropertyDataService()
+
+
+@router.get(
+    "/units",
+    summary="List all addressable units (flats/houses) at a postcode, with UPRN",
+)
+async def list_units(
+    postcode: str,
+    pd: Annotated[PropertyDataService, Depends(get_property_data_service)],
+) -> dict:
+    """
+    Returns every address registered at a postcode (via Homedata), so the
+    frontend can present a dropdown for the user to pick their specific flat.
+    """
+    addresses = await pd.get_homedata_addresses_by_postcode(postcode)
+    return {"postcode": postcode, "count": len(addresses), "addresses": addresses}
 
 
 @router.post(

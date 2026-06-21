@@ -101,6 +101,7 @@ class PropertyDetailOut(_OrmBase):
 class ValuationRequest(BaseModel):
     address: str = Field(..., min_length=5, max_length=300)
     unit_identifier: str | None = Field(default=None, max_length=100, description="Flat/unit name or number, e.g. Flat 23 or Apartment 5B")
+    uprn: str | None = Field(default=None, max_length=20, description="UPRN of the selected unit, if known (from /address/units lookup)")
     bedrooms: int | None = None
     bathrooms: int | None = None
     condition: str | None = None
