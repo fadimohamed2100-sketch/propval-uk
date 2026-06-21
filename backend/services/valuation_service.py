@@ -88,11 +88,13 @@ class ValuationService:
         property_type: str | None = None,
         tenure: str | None = None,
         lease_years: int | None = None,
+        unit_identifier: str | None = None,
     ) -> ValuationReport:
         address, property_ = await self.resolve_address(raw_address)
 
         # Enrich property from EPC if we have one
-        epc = await self._property_data.get_epc_data(address.postcode, line_1=address.line_1)
+        epc_match_line = f"{unit_identifier} {address.line_1}" if unit_identifier else address.line_1
+        epc = await self._property_data.get_epc_data(address.postcode, line_1=epc_match_line)
 
         # Override EPC data with user-provided values if available
         if bedrooms and epc:
