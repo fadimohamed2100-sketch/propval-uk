@@ -255,16 +255,21 @@ class ValuationEngine:
         scored: list[tuple[ComparableInput, float]],
     ) -> int:
         """
-        Interpolated weighted median of sale prices.
-        More reliable than weighted mean for skewed distributions.
+        Weighted median of sale prices: sorts comparables by PRICE first,
+        then walks the cumulative weight to find the 50% crossing point.
         """
-        total_weight = sum(s for _, s in scored)
+        if not scored:
+            return 0
+        by_price = sorted(scored, key=lambda x: x[0].sale_price)
+        total_weight = sum(s for _, s in by_price)
+        if total_weight <= 0:
+            return by_price[len(by_price) // 2][0].sale_price
         cumulative = 0.0
-        for comp, score in scored:
+        for comp, score in by_price:
             cumulative += score / total_weight
             if cumulative >= 0.5:
                 return comp.sale_price
-        return scored[-1][0].sale_price if scored else 0
+        return by_price[-1][0].sale_price
 
     # ------------------------------------------------------------------
     # Confidence
