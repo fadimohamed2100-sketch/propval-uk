@@ -27,6 +27,7 @@ export default function HomePage() {
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [propertyType, setPropertyType] = useState("");
+  const [unitIdentifier, setUnitIdentifier] = useState("");
   const [tenure, setTenure] = useState("");
   const [leaseYears, setLeaseYears] = useState("");
   const [condition, setCondition] = useState("");
@@ -47,6 +48,7 @@ export default function HomePage() {
       if (bedrooms) payload.bedrooms = parseInt(bedrooms);
       if (bathrooms) payload.bathrooms = parseInt(bathrooms);
       if (propertyType) payload.property_type = propertyType;
+      if (unitIdentifier) payload.unit_identifier = unitIdentifier;
       if (tenure) payload.tenure = tenure;
       if (leaseYears) payload.lease_years = parseInt(leaseYears);
       if (condition) payload.condition = condition;
@@ -131,6 +133,18 @@ export default function HomePage() {
                     <option value="flat">Flat</option>
                   </select>
                 </div>
+                {propertyType === "flat" && (
+                  <div>
+                    <label className={labelClass}>Flat / Unit Name or Number</label>
+                    <input
+                      type="text"
+                      value={unitIdentifier}
+                      onChange={e => setUnitIdentifier(e.target.value)}
+                      placeholder="e.g. Flat 23 or Apartment 5B"
+                      className={selectClass}
+                    />
+                  </div>
+                )}
                 <div>
                   <label className={labelClass}>Bedrooms</label>
                   <select value={bedrooms} onChange={e => setBedrooms(e.target.value)} className={selectClass}>
