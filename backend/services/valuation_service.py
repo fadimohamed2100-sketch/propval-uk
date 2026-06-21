@@ -117,9 +117,9 @@ class ValuationService:
             epc["bedrooms"] = bedrooms
         if property_type:
             if epc:
-                epc["property_type"] = property_type
+                epc["property_type"] = property_type.replace("-", "_") if property_type else property_type
             if property_:
-                property_.property_type = property_type
+                property_.property_type = property_type.replace("-", "_") if property_type else property_type
         if not property_:
             property_ = await self._create_property(address, epc)
         if property_:
