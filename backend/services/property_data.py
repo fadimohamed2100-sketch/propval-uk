@@ -288,22 +288,61 @@ class PropertyDataService:
         except Exception as e:
             logger.warning("homedata_postcode_error", error=str(e))
         return []
+    @staticmethod
+    def _sap_score_to_epc_band(score) -> str | None:
+        """Convert a numeric SAP energy efficiency score (0-100) to an EPC letter band."""
+        try:
+            score = float(score)
+        except (TypeError, ValueError):
+            return None
+        if score >= 92:
+            return "A"
+        if score >= 81:
+            return "B"
+        if score >= 69:
+            return "C"
+        if score >= 55:
+            return "D"
+        if score >= 39:
+            return "E"
+        if score >= 21:
+            return "F"
+        return "G"
     async def get_homedata_property(self, uprn: str | int) -> dict | None:
-        """Retrieve enriched property record (EPC, floor area, bedrooms, last sold) by UPRN."""
+        """
+        Retrieve enriched property record (EPC, floor area, bedrooms, last sold)
+        for an exact UPRN via Homedata's /property/{uprn}/base endpoint.
+        """
         if not settings.HOMEDATA_API_KEY:
             return None
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.get(
-                    f"https://api.homedata.co.uk/api/address/retrieve/{uprn}/",
-                    params={"level": "full"},
+                    f"https://api.homedata.co.uk/property/{uprn}/base",
                     headers={"Authorization": f"Api-Key {settings.HOMEDATA_API_KEY}"},
                 )
-                if resp.status_code == 200:
-                    return resp.json()
+                if resp.status_code != 200:
+                    return None
+                data = resp.json()
         except Exception as e:
             logger.warning("homedata_retrieve_error", error=str(e))
-        return None
+            return None
+        epc_section = data.get("epc", {}) or {}
+        rooms_section = data.get("rooms", {}) or {}
+        dims_section = data.get("dimensions", {}) or {}
+        prop_type_section = data.get("property_type", {}) or {}
+        floor_area = epc_section.get("epc_floor_area") or dims_section.get("predicted_floor_area")
+        epc_rating = self._sap_score_to_epc_band(epc_section.get("current_energy_efficiency"))
+        bedrooms = rooms_section.get("bedrooms") or rooms_section.get("predicted_bedrooms")
+        property_type = (prop_type_section.get("property_type") or "").lower().replace(" ", "_") or None
+        return {
+            "epc_floor_area": floor_area,
+            "epc_rating": epc_rating,
+            "bedrooms": bedrooms,
+            "property_type": property_type,
+            "last_sold_price": data.get("last_sold", {}).get("price") if isinstance(data.get("last_sold"), dict) else None,
+            "last_sold_date": data.get("last_sold", {}).get("date") if isinstance(data.get("last_sold"), dict) else None,
+        }
     async def close(self) -> None:
         await self._lr_client.aclose()
         await self._epc_client.aclose()
