@@ -29,7 +29,7 @@ export default function HomePage() {
   const [propertyType, setPropertyType] = useState("");
   const [unitIdentifier, setUnitIdentifier] = useState("");
   const [selectedUprn, setSelectedUprn] = useState("");
-  const [unitOptions, setUnitOptions] = useState<{uprn: string; address: string}[]>([]);
+  const [unitOptions, setUnitOptions] = useState<{uprn: string; address: string; cleanAddress: string; postcode: string}[]>([]);
   const [loadingUnits, setLoadingUnits] = useState(false);
   const [tenure, setTenure] = useState("");
   const [leaseYears, setLeaseYears] = useState("");
@@ -54,7 +54,11 @@ export default function HomePage() {
       const base = process.env.NEXT_PUBLIC_API_BASE_URL || "https://propval-uk-production.up.railway.app";
       const res = await fetch(`${base}/api/v1/address/units?postcode=${encodeURIComponent(postcode)}`);
       const data = await res.json();
-      const opts = (data.addresses || []).map((a: any) => ({ uprn: String(a.uprn), address: a.address }));
+      const opts = (data.addresses || []).map((a: any) => {
+        const houseNum = a.building_number || a.sub_building || "";
+        const cleanAddress = [houseNum, a.street].filter(Boolean).join(" ") + (data.postcode ? `, ${data.postcode}` : "");
+        return { uprn: String(a.uprn), address: a.address, cleanAddress, postcode: data.postcode || "" };
+      });
       setUnitOptions(opts);
     } catch {
       setUnitOptions([]);
@@ -188,7 +192,7 @@ export default function HomePage() {
                           setSelectedUprn(uprn);
                           const match = unitOptions.find(o => o.uprn === uprn);
                           setUnitIdentifier(match ? match.address : "");
-                          if (match) setAddress(match.address);
+                          if (match) setAddress(match.cleanAddress);
                         }}
                         className={selectClass}
                       >
