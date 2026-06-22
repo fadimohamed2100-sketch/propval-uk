@@ -129,9 +129,13 @@ export default function HomePage() {
                 ref={inputRef}
                 type="text"
                 value={address}
-                onChange={(e) => { setAddress(e.target.value); setError(null); }}
+                onChange={(e) => {
+                  const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 8);
+                  setAddress(cleaned);
+                  setError(null);
+                }}
                 onBlur={() => loadUnits()}
-                placeholder="e.g. 15 Victoria Street, Edinburgh, EH1 2JL"
+                placeholder="e.g. EH1 2JL"
                 className="flex-1 py-5 pl-14 pr-4 text-base md:text-lg bg-transparent outline-none placeholder:text-ink-faint rounded-2xl"
                 disabled={loading}
                 autoComplete="off"
@@ -149,7 +153,7 @@ export default function HomePage() {
               </button>
             </div>
 
-            <div style={{display: "flex", alignItems: "center", gap: 8, background: "#fef9ec", border: "1px solid #f5e4a0", borderRadius: 10, padding: "10px 14px", marginBottom: 12}}><span style={{fontSize: 16}}>💡</span><p style={{fontSize: 13, color: "#7a6a1a", fontFamily: "sans-serif", margin: 0}}>Use street name + postcode. For flats, skip the flat number — e.g. <strong>Kingsman Street, SE18 5QH</strong></p></div>
+            <div style={{display: "flex", alignItems: "center", gap: 8, background: "#fef9ec", border: "1px solid #f5e4a0", borderRadius: 10, padding: "10px 14px", marginBottom: 12}}><span style={{fontSize: 16}}>💡</span><p style={{fontSize: 13, color: "#7a6a1a", fontFamily: "sans-serif", margin: 0}}>Enter a postcode, then pick your exact address from the list below — e.g. <strong>SE18 5QH</strong></p></div>
             {error && <p className="mb-3 text-sm text-red-500 pl-1">{error}</p>}
 
             <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-3 grid grid-cols-2 md:grid-cols-3 gap-4">
