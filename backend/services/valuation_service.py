@@ -127,8 +127,9 @@ class ValuationService:
                 property_.bedrooms = bedrooms
             elif epc and not property_.bedrooms:
                 property_.bedrooms = epc.get("bedrooms")
-            if epc and not property_.floor_area_m2:
+            if epc and epc.get("floor_area_m2"):
                 property_.floor_area_m2 = epc.get("floor_area_m2")
+            if epc and epc.get("epc_rating"):
                 property_.epc_rating = epc.get("epc_rating")
 
         # Return cached valuation unless force_refresh
