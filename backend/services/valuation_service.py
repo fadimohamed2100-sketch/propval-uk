@@ -94,13 +94,26 @@ class ValuationService:
         address, property_ = await self.resolve_address(raw_address)
         # Enrich property: prefer Homedata UPRN lookup (exact match) if available,
         # otherwise fall back to EPC postcode + address-line matching.
+        # Homedata results are cached permanently on the Property row (keyed by UPRN)
+        # to avoid burning API quota on repeat valuations of the same unit.
         epc = None
         last_sold_price = None
         last_sold_date = None
-        logger.info("uprn_check", uprn=uprn, uprn_type=type(uprn).__name__)
-        if uprn:
+        cached_external_ids = (property_.external_ids if property_ else {}) or {}
+        cached_homedata = cached_external_ids.get("homedata") if uprn and cached_external_ids.get("uprn") == uprn else None
+        fresh_homedata_for_create = None
+        if uprn and cached_homedata:
+            hd = cached_homedata
+            epc = {
+                "floor_area_m2": hd.get("epc_floor_area") or hd.get("floor_area_sqm"),
+                "epc_rating": hd.get("epc_rating") or hd.get("current_energy_rating"),
+                "property_type": (hd.get("property_type") or "").lower().replace(" ", "_") or None,
+                "bedrooms": hd.get("bedrooms"),
+            }
+            last_sold_price = hd.get("last_sold_price") or hd.get("price")
+            last_sold_date = hd.get("last_sold_date") or hd.get("sold_date")
+        elif uprn:
             hd = await self._property_data.get_homedata_property(uprn)
-            logger.info("homedata_result", hd=hd)
             if hd:
                 epc = {
                     "floor_area_m2": hd.get("epc_floor_area") or hd.get("floor_area_sqm"),
@@ -110,6 +123,9 @@ class ValuationService:
                 }
                 last_sold_price = hd.get("last_sold_price") or hd.get("price")
                 last_sold_date = hd.get("last_sold_date") or hd.get("sold_date")
+                fresh_homedata_for_create = {"uprn": uprn, "homedata": hd}
+                if property_:
+                    property_.external_ids = {**cached_external_ids, "uprn": uprn, "homedata": hd}
         if not epc:
             epc_match_line = f"{unit_identifier} {address.line_1}" if unit_identifier else address.line_1
             epc = await self._property_data.get_epc_data(address.postcode, line_1=epc_match_line)
@@ -123,7 +139,7 @@ class ValuationService:
             if property_:
                 property_.property_type = property_type.replace("-", "_") if property_type else property_type
         if not property_:
-            property_ = await self._create_property(address, epc)
+            property_ = await self._create_property(address, epc, external_ids=fresh_homedata_for_create)
         if property_:
             if bedrooms:
                 property_.bedrooms = bedrooms
@@ -346,7 +362,7 @@ class ValuationService:
         return result.scalar_one_or_none()
 
     async def _create_property(
-        self, address: Address, epc: dict | None
+        self, address: Address, epc: dict | None, external_ids: dict | None = None
     ) -> Property:
         property_ = Property(
             address_id=address.id,
@@ -354,6 +370,7 @@ class ValuationService:
             floor_area_m2=(epc or {}).get("floor_area_m2"),
             epc_rating=(epc or {}).get("epc_rating"),
             bedrooms=(epc or {}).get("bedrooms"),
+            external_ids=external_ids or {},
         )
         self._db.add(property_)
         await self._db.flush()
