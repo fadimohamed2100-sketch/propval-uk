@@ -130,6 +130,7 @@ export default function HomePage() {
                 type="text"
                 value={address}
                 onChange={(e) => { setAddress(e.target.value); setError(null); }}
+                onBlur={() => loadUnits()}
                 placeholder="e.g. 15 Victoria Street, Edinburgh, EH1 2JL"
                 className="flex-1 py-5 pl-14 pr-4 text-base md:text-lg bg-transparent outline-none placeholder:text-ink-faint rounded-2xl"
                 disabled={loading}
@@ -170,7 +171,7 @@ export default function HomePage() {
                     <option value="flat">Flat</option>
                   </select>
                 </div>
-                {propertyType && (
+                {(loadingUnits || unitOptions.length > 0) && (
                   <div>
                     <label className={labelClass}>Specific Address</label>
                     {loadingUnits ? (
