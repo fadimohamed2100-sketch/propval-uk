@@ -285,6 +285,8 @@ class PropertyDataService:
                 if resp.status_code == 200:
                     data = resp.json()
                     return data.get("addresses", [])
+                else:
+                    logger.warning("homedata_postcode_non_200", status=resp.status_code, body=resp.text[:300])
         except Exception as e:
             logger.warning("homedata_postcode_error", error=str(e))
         return []
