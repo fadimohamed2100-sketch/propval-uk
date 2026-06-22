@@ -322,6 +322,7 @@ class PropertyDataService:
                     headers={"Authorization": f"Api-Key {settings.HOMEDATA_API_KEY}"},
                 )
                 if resp.status_code != 200:
+                    logger.warning("homedata_non_200", status=resp.status_code, body=resp.text[:300], uprn=str(uprn))
                     return None
                 data = resp.json()
         except Exception as e:
