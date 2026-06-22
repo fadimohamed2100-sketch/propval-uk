@@ -28,12 +28,40 @@ export default function HomePage() {
   const [bathrooms, setBathrooms] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [unitIdentifier, setUnitIdentifier] = useState("");
+  const [selectedUprn, setSelectedUprn] = useState("");
+  const [unitOptions, setUnitOptions] = useState<{uprn: string; address: string}[]>([]);
+  const [loadingUnits, setLoadingUnits] = useState(false);
   const [tenure, setTenure] = useState("");
   const [leaseYears, setLeaseYears] = useState("");
   const [condition, setCondition] = useState("");
   const [driveway, setDriveway] = useState(false);
   const [outdoorSpace, setOutdoorSpace] = useState("none");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function extractPostcode(text: string): string | null {
+    const match = text.match(/[A-Za-z]{1,2}[0-9][0-9A-Za-z]?\s*[0-9][A-Za-z]{2}/);
+    return match ? match[0].toUpperCase().replace(/\s+/g, " ").trim() : null;
+  }
+
+  async function loadUnits() {
+    const postcode = extractPostcode(address);
+    if (!postcode) {
+      setUnitOptions([]);
+      return;
+    }
+    setLoadingUnits(true);
+    try {
+      const base = process.env.NEXT_PUBLIC_API_BASE_URL || "https://propval-uk-production.up.railway.app";
+      const res = await fetch(`${base}/api/v1/address/units?postcode=${encodeURIComponent(postcode)}`);
+      const data = await res.json();
+      const opts = (data.addresses || []).map((a: any) => ({ uprn: String(a.uprn), address: a.address }));
+      setUnitOptions(opts);
+    } catch {
+      setUnitOptions([]);
+    } finally {
+      setLoadingUnits(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent | null, overrideAddress?: string) {
     e?.preventDefault();
@@ -49,6 +77,7 @@ export default function HomePage() {
       if (bathrooms) payload.bathrooms = parseInt(bathrooms);
       if (propertyType) payload.property_type = propertyType;
       if (unitIdentifier) payload.unit_identifier = unitIdentifier;
+      if (selectedUprn) payload.uprn = selectedUprn;
       if (tenure) payload.tenure = tenure;
       if (leaseYears) payload.lease_years = parseInt(leaseYears);
       if (condition) payload.condition = condition;
@@ -125,7 +154,15 @@ export default function HomePage() {
             <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-3 grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className={labelClass}>Property Type</label>
-                  <select value={propertyType} onChange={e => setPropertyType(e.target.value)} className={selectClass}>
+                  <select
+                    value={propertyType}
+                    onChange={e => {
+                      setPropertyType(e.target.value);
+                      if (e.target.value === "flat") loadUnits();
+                      else { setUnitOptions([]); setSelectedUprn(""); setUnitIdentifier(""); }
+                    }}
+                    className={selectClass}
+                  >
                     <option value="">Unknown</option>
                     <option value="terraced">Terraced</option>
                     <option value="semi-detached">Semi-Detached</option>
@@ -135,14 +172,34 @@ export default function HomePage() {
                 </div>
                 {propertyType === "flat" && (
                   <div>
-                    <label className={labelClass}>Flat / Unit Name or Number</label>
-                    <input
-                      type="text"
-                      value={unitIdentifier}
-                      onChange={e => setUnitIdentifier(e.target.value)}
-                      placeholder="e.g. Flat 23 or Apartment 5B"
-                      className={selectClass}
-                    />
+                    <label className={labelClass}>Flat / Unit</label>
+                    {loadingUnits ? (
+                      <div className={selectClass + " flex items-center text-stone-400"}>Loading units…</div>
+                    ) : unitOptions.length > 0 ? (
+                      <select
+                        value={selectedUprn}
+                        onChange={e => {
+                          const uprn = e.target.value;
+                          setSelectedUprn(uprn);
+                          const match = unitOptions.find(o => o.uprn === uprn);
+                          setUnitIdentifier(match ? match.address : "");
+                        }}
+                        className={selectClass}
+                      >
+                        <option value="">Select your flat…</option>
+                        {unitOptions.map(o => (
+                          <option key={o.uprn} value={o.uprn}>{o.address}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={unitIdentifier}
+                        onChange={e => setUnitIdentifier(e.target.value)}
+                        placeholder="e.g. Flat 23 or Apartment 5B"
+                        className={selectClass}
+                      />
+                    )}
                   </div>
                 )}
                 <div>
