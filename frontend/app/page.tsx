@@ -158,7 +158,7 @@ export default function HomePage() {
                     value={propertyType}
                     onChange={e => {
                       setPropertyType(e.target.value);
-                      if (e.target.value === "flat") loadUnits();
+                      if (e.target.value) loadUnits();
                       else { setUnitOptions([]); setSelectedUprn(""); setUnitIdentifier(""); }
                     }}
                     className={selectClass}
@@ -170,9 +170,9 @@ export default function HomePage() {
                     <option value="flat">Flat</option>
                   </select>
                 </div>
-                {propertyType === "flat" && (
+                {propertyType && (
                   <div>
-                    <label className={labelClass}>Flat / Unit</label>
+                    <label className={labelClass}>Specific Address</label>
                     {loadingUnits ? (
                       <div className={selectClass + " flex items-center text-stone-400"}>Loading units…</div>
                     ) : unitOptions.length > 0 ? (
@@ -186,7 +186,7 @@ export default function HomePage() {
                         }}
                         className={selectClass}
                       >
-                        <option value="">Select your flat…</option>
+                        <option value="">Select your exact address…</option>
                         {unitOptions.map(o => (
                           <option key={o.uprn} value={o.uprn}>{o.address}</option>
                         ))}
