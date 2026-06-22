@@ -340,8 +340,8 @@ class PropertyDataService:
             "epc_rating": epc_rating,
             "bedrooms": bedrooms,
             "property_type": property_type,
-            "last_sold_price": data.get("last_sold", {}).get("price") if isinstance(data.get("last_sold"), dict) else None,
-            "last_sold_date": data.get("last_sold", {}).get("date") if isinstance(data.get("last_sold"), dict) else None,
+            "last_sold_price": data.get("last_sold", {}).get("last_sold_price_gbp") if isinstance(data.get("last_sold"), dict) else None,
+            "last_sold_date": data.get("last_sold", {}).get("last_sold_date") if isinstance(data.get("last_sold"), dict) else None,
         }
     async def close(self) -> None:
         await self._lr_client.aclose()
