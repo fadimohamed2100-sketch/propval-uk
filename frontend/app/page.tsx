@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin, TrendingUp, Building2, Sparkles } from "lucide-react";
 import { runValuation } from "@/lib/api";
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import { ApiClientError } from "@/lib/api";
 
 const EXAMPLE_ADDRESSES = [
@@ -108,7 +109,14 @@ export default function HomePage() {
         <div className="flex items-center gap-6 text-sm text-ink-muted">
           <a href="#how" className="hover:text-ink transition-colors">How it works</a>
           <a href="#" className="hover:text-ink transition-colors">API</a>
-          <button className="bg-ink text-stone-50 px-4 py-2 rounded-full text-sm font-medium hover:bg-stone-800 transition-colors">Sign in</button>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="bg-ink text-stone-50 px-4 py-2 rounded-full text-sm font-medium hover:bg-stone-800 transition-colors">Sign in</button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
         </div>
       </nav>
 

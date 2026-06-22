@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, DM_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -35,10 +36,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${dmMono.variable} ${inter.variable}`}>
-      <body className="bg-surface font-sans text-ink antialiased">
-        {children}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${fraunces.variable} ${dmMono.variable} ${inter.variable}`}>
+        <body className="bg-surface font-sans text-ink antialiased">
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
