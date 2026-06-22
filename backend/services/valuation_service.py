@@ -97,8 +97,10 @@ class ValuationService:
         epc = None
         last_sold_price = None
         last_sold_date = None
+        logger.info("uprn_check", uprn=uprn, uprn_type=type(uprn).__name__)
         if uprn:
             hd = await self._property_data.get_homedata_property(uprn)
+            logger.info("homedata_result", hd=hd)
             if hd:
                 epc = {
                     "floor_area_m2": hd.get("epc_floor_area") or hd.get("floor_area_sqm"),
