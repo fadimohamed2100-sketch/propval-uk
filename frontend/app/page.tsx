@@ -184,6 +184,7 @@ export default function HomePage() {
                           setSelectedUprn(uprn);
                           const match = unitOptions.find(o => o.uprn === uprn);
                           setUnitIdentifier(match ? match.address : "");
+                          if (match) setAddress(match.address);
                         }}
                         className={selectClass}
                       >
