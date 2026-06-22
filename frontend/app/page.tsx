@@ -7,10 +7,10 @@ import { runValuation } from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
 
 const EXAMPLE_ADDRESSES = [
-  "42 Portobello Road, London, W11 2DA",
-  "15 Victoria Street, Edinburgh, EH1 2JL",
-  "8 Deansgate, Manchester, M3 2FF",
-  "22 Park Row, Leeds, LS1 5JF",
+  "W11 2DA",
+  "EH1 2JL",
+  "M3 2FF",
+  "LS1 5JF",
 ];
 
 const STATS = [
@@ -286,7 +286,7 @@ export default function HomePage() {
                 <button
                   key={addr}
                   type="button"
-                  onClick={() => { setAddress(addr); handleSubmit(null, addr); }}
+                  onClick={() => { setAddress(addr); loadUnits(); }}
                   disabled={loading}
                   className="text-xs text-ink-muted bg-stone-100 hover:bg-stone-200 border border-stone-200 px-3 py-1.5 rounded-full transition-colors disabled:opacity-40"
                 >
