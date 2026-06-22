@@ -134,7 +134,10 @@ export default function HomePage() {
                 type="text"
                 value={address}
                 onChange={(e) => {
-                  const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 8);
+                  let cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
+                  if (cleaned.length > 3) {
+                    cleaned = cleaned.slice(0, -3) + " " + cleaned.slice(-3);
+                  }
                   setAddress(cleaned);
                   setError(null);
                 }}
