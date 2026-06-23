@@ -35,6 +35,20 @@ class GeocoderService:
         wait=wait_exponential(multiplier=1, min=1, max=5),
         reraise=True,
     )
+    async def _query_nominatim(self, query: str) -> list[dict]:
+        resp = await self._client.get(
+            "/search",
+            params={
+                "q": query,
+                "format": "jsonv2",
+                "addressdetails": 1,
+                "limit": 1,
+                "countrycodes": "gb",
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     async def geocode(self, address: str) -> dict:
         """
         Returns:
@@ -44,21 +58,27 @@ class GeocoderService:
                 "lat": float, "lng": float, "address_norm": str
             }
         Raises:
-            AddressNotFoundError if Nominatim returns no results.
+            AddressNotFoundError if Nominatim returns no results, even
+            after falling back to a postcode-only lookup.
         """
         logger.info("geocoding_address", address=address)
-        resp = await self._client.get(
-            "/search",
-            params={
-                "q": address,
-                "format": "jsonv2",
-                "addressdetails": 1,
-                "limit": 1,
-                "countrycodes": "gb",
-            },
-        )
-        resp.raise_for_status()
-        results = resp.json()
+        results = await self._query_nominatim(address)
+
+        if not results:
+            # The full address (often including a flat/building name Nominatim
+            # doesn't index) may not resolve. Fall back to just the postcode —
+            # this still gives us a usable lat/lng and locality for the area,
+            # and the original address string is preserved as line_1 below.
+            postcode_match = re.search(
+                r"[A-Za-z]{1,2}[0-9][0-9A-Za-z]?\s*[0-9][A-Za-z]{2}", address
+            )
+            if postcode_match:
+                logger.info(
+                    "geocoding_fallback_to_postcode",
+                    address=address,
+                    postcode=postcode_match.group(0),
+                )
+                results = await self._query_nominatim(postcode_match.group(0))
 
         if not results:
             raise AddressNotFoundError(address)

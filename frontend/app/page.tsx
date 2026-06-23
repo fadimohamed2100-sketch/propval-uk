@@ -58,8 +58,9 @@ export default function HomePage() {
       const res = await fetch(`${base}/api/v1/address/units?postcode=${encodeURIComponent(postcode)}`);
       const data = await res.json();
       const opts = (data.addresses || []).map((a: any) => {
-        const houseNum = a.building_number || a.sub_building || "";
-        const cleanAddress = [houseNum, a.street].filter(Boolean).join(" ") + (data.postcode ? `, ${data.postcode}` : "");
+        const unitAndBuilding = [a.sub_building, a.building_name].filter(Boolean).join(", ");
+        const houseAndStreet = [a.building_number, a.street].filter(Boolean).join(" ");
+        const cleanAddress = [unitAndBuilding, houseAndStreet].filter(Boolean).join(", ") + (data.postcode ? `, ${data.postcode}` : "");
         return { uprn: String(a.uprn), address: a.address, cleanAddress, postcode: data.postcode || "" };
       });
       setUnitOptions(opts);
