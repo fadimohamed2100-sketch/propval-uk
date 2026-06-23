@@ -2,3 +2,8 @@ node_modules/
 .next/
 .env*.local
 *.zip
+__pycache__/
+*.pyc
+venv/
+.venv/
+backend/.env

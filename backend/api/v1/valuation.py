@@ -4,11 +4,23 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
+from api.auth import get_current_user
 from api.deps import get_valuation_service
 from core.exceptions import ReportNotReadyError
-from schemas.schemas import ComparableOut, ValuationDetailOut, ValuationOut, ValuationRequest
+from db.session import get_db
+from models.orm import Property, User, ValuationReport
+from schemas.schemas import (
+    ComparableOut,
+    ValuationDetailOut,
+    ValuationHistoryItemOut,
+    ValuationOut,
+    ValuationRequest,
+)
 from services.valuation_service import ValuationService
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/valuation", tags=["Valuation"])
 
@@ -80,6 +92,7 @@ def _serialise_valuation(report, *, include_property: bool = False):
 async def run_valuation(
     body: ValuationRequest,
     svc: Annotated[ValuationService, Depends(get_valuation_service)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ValuationDetailOut:
     """
     Full pipeline:
@@ -89,10 +102,12 @@ async def run_valuation(
     4. Run the valuation engine
     5. Return complete report with comparables
 
+    Requires a signed-in user (Clerk session token in the Authorization header).
     Set `force_refresh: true` to bypass the 30-day cache.
     """
     report = await svc.run_valuation(
         raw_address=body.address,
+        user_id=current_user.id,
         force_refresh=body.force_refresh,
         bedrooms=body.bedrooms,
         bathrooms=body.bathrooms,
@@ -106,6 +121,52 @@ async def run_valuation(
         uprn=body.uprn,
     )
     return _serialise_valuation(report, include_property=True)
+
+
+# ---------------------------------------------------------------
+# GET /valuation/history
+# ---------------------------------------------------------------
+@router.get(
+    "/history",
+    response_model=list[ValuationHistoryItemOut],
+    summary="List the signed-in user's past valuations, most recent first",
+)
+async def get_valuation_history(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[ValuationHistoryItemOut]:
+    stmt = (
+        select(ValuationReport)
+        .where(ValuationReport.user_id == current_user.id)
+        .options(
+            selectinload(ValuationReport.property).selectinload(Property.address)
+        )
+        .order_by(ValuationReport.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    reports = result.scalars().all()
+
+    items: list[ValuationHistoryItemOut] = []
+    for report in reports:
+        addr = report.property.address if report.property else None
+        address_line = ", ".join(
+            filter(None, [addr.line_1, addr.line_2, addr.city] if addr else [])
+        ) or "Unknown address"
+        items.append(
+            ValuationHistoryItemOut(
+                id=report.id,
+                address_line=address_line,
+                postcode=addr.postcode if addr else "",
+                estimated_value_gbp=_to_gbp(report.estimated_value),
+                range_low_gbp=_to_gbp(report.range_low),
+                range_high_gbp=_to_gbp(report.range_high),
+                confidence_score=float(report.confidence_score) if report.confidence_score else None,
+                status=report.status,
+                pdf_url=f"/api/v1/valuation/{report.id}/report" if report.pdf_path else None,
+                created_at=report.created_at,
+            )
+        )
+    return items
 
 
 # ---------------------------------------------------------------

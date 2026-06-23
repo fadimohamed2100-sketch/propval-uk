@@ -164,6 +164,19 @@ class ValuationDetailOut(ValuationOut):
     methodology: dict[str, Any]
 
 
+class ValuationHistoryItemOut(BaseModel):
+    id: uuid.UUID
+    address_line: str
+    postcode: str
+    estimated_value_gbp: float | None = None
+    range_low_gbp: float | None = None
+    range_high_gbp: float | None = None
+    confidence_score: float | None = None
+    status: str
+    pdf_url: str | None = None
+    created_at: datetime
+
+
 # ================================================================
 # USERS  (minimal — extend for full auth)
 # ================================================================

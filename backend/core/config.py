@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24h
 
+    # Clerk authentication (networkless JWT verification via JWKS)
+    CLERK_FRONTEND_API: str = "more-calf-62.clerk.accounts.dev"
+
     # External APIs
     LAND_REGISTRY_BASE_URL: str = "https://use-land-property-data.service.gov.uk/api/v1"
     EPC_API_BASE_URL: str = "https://epc.opendatacommunities.org/api/v1"
