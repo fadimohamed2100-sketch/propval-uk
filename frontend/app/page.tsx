@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin, TrendingUp, Building2, Sparkles } from "lucide-react";
 import { runValuation } from "@/lib/api";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, UserButton, useAuth, useClerk } from "@clerk/nextjs";
 import { ApiClientError } from "@/lib/api";
 
 const EXAMPLE_ADDRESSES = [
@@ -22,6 +22,8 @@ const STATS = [
 
 export default function HomePage() {
   const router = useRouter();
+  const { isSignedIn, isLoaded, getToken } = useAuth();
+  const { openSignIn } = useClerk();
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,11 +74,17 @@ export default function HomePage() {
     e?.preventDefault();
     const query = (overrideAddress ?? address).trim();
     if (!query) { inputRef.current?.focus(); return; }
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      openSignIn({});
+      return;
+    }
     if (!propertyType) { setError("Please select a property type."); return; }
     if (!bedrooms) { setError("Please select the number of bedrooms."); return; }
     setLoading(true);
     setError(null);
     try {
+      const token = await getToken();
       const payload: any = { address: query };
       if (bedrooms) payload.bedrooms = parseInt(bedrooms);
       if (bathrooms) payload.bathrooms = parseInt(bathrooms);
@@ -88,7 +96,7 @@ export default function HomePage() {
       if (condition) payload.condition = condition;
       if (driveway) payload.parking = "single";
       if (outdoorSpace) payload.outdoor_space = outdoorSpace;
-      const result = await runValuation(payload);
+      const result = await runValuation(payload, token);
       router.push(`/results/${result.id}`);
     } catch (err) {
       if (err instanceof ApiClientError) setError(err.detail);
@@ -109,6 +117,9 @@ export default function HomePage() {
         <div className="flex items-center gap-6 text-sm text-ink-muted">
           <a href="#how" className="hover:text-ink transition-colors">How it works</a>
           <a href="#" className="hover:text-ink transition-colors">API</a>
+          <SignedIn>
+            <a href="/history" className="hover:text-ink transition-colors">History</a>
+          </SignedIn>
           <SignedOut>
             <SignInButton mode="modal">
               <button className="bg-ink text-stone-50 px-4 py-2 rounded-full text-sm font-medium hover:bg-stone-800 transition-colors">Sign in</button>

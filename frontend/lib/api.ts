@@ -3,6 +3,7 @@ import type {
   AddressSearchResponse,
   ApiError,
   Valuation,
+  ValuationHistoryItem,
   ValuationRequest,
 } from "./types";
 
@@ -24,10 +25,17 @@ class ApiClientError extends Error {
 async function request<T>(
   path: string,
   init?: RequestInit,
+  token?: string | null,
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
     ...init,
+    headers,
   });
 
   if (!res.ok) {
@@ -52,15 +60,23 @@ export async function searchAddress(
 
 export async function runValuation(
   body: ValuationRequest,
+  token: string | null,
 ): Promise<Valuation> {
-  return request<Valuation>("/valuation/run", {
-    method: "POST",
-    body:   JSON.stringify(body),
-  });
+  return request<Valuation>(
+    "/valuation/run",
+    { method: "POST", body: JSON.stringify(body) },
+    token,
+  );
 }
 
 export async function getValuation(id: string): Promise<Valuation> {
   return request<Valuation>(`/valuation/${id}`);
+}
+
+export async function getValuationHistory(
+  token: string | null,
+): Promise<ValuationHistoryItem[]> {
+  return request<ValuationHistoryItem[]>("/valuation/history", undefined, token);
 }
 
 export function reportPdfUrl(id: string): string {

@@ -68,6 +68,20 @@ export interface Valuation {
   expires_at:            string;
 }
 
+// ─── Valuation History ───────────────────────────────────────
+export interface ValuationHistoryItem {
+  id:                    string;
+  address_line:          string;
+  postcode:              string;
+  estimated_value_gbp:   number | null;
+  range_low_gbp:         number | null;
+  range_high_gbp:        number | null;
+  confidence_score:      number | null;
+  status:                string;
+  pdf_url:               string | null;
+  created_at:            string;
+}
+
 // ─── Requests ────────────────────────────────────────────────
 export interface ValuationRequest {
   address:       string;
