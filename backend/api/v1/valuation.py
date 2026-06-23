@@ -1,4 +1,3 @@
-import os
 import uuid
 from typing import Annotated
 
@@ -9,7 +8,6 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.deps import get_valuation_service
-from core.exceptions import ReportNotReadyError
 from db.session import get_db
 from models.orm import Property, User, ValuationReport
 from schemas.schemas import (
@@ -202,17 +200,15 @@ async def download_report(
     svc: Annotated[ValuationService, Depends(get_valuation_service)],
 ) -> FileResponse:
     """
-    Streams the pre-generated PDF to the client.
-    Returns 409 if the PDF is not yet ready.
+    Generates the branded PDF report on first request (a few seconds,
+    since it renders via headless Chromium), then serves the cached
+    file on every subsequent download for the same valuation.
     """
-    report = await svc.get_valuation(valuation_id)
-
-    if not report.pdf_path or not os.path.exists(report.pdf_path):
-        raise ReportNotReadyError(str(valuation_id))
+    pdf_path = await svc.get_or_generate_report_pdf(valuation_id)
 
     filename = f"valuation_{valuation_id}.pdf"
     return FileResponse(
-        path=report.pdf_path,
+        path=str(pdf_path),
         media_type="application/pdf",
         filename=filename,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},

@@ -24,8 +24,10 @@ from sqlalchemy.orm import selectinload
 from core.exceptions import ValuationFailedError, ValuationNotFoundError
 from core.logging import get_logger
 from models.orm import Address, Comparable, Property, ValuationReport
+from pathlib import Path
+
 from services.geocoder import GeocoderService
-from services.pdf_generator import build_report_context, generate_report_pdf
+from services.pdf_playwright import PlaywrightPDFService
 from services.property_data import PropertyDataService
 from services.valuation_engine import ComparableInput, ValuationEngine
 
@@ -290,14 +292,6 @@ class ValuationService:
 
         await self._db.flush()
 
-        # Generate PDF (sync for MVP; move to background task in production)
-        try:
-            context = build_report_context(report, property_, address, [])
-            pdf_path = generate_report_pdf(context)
-            report.pdf_path = pdf_path
-        except Exception as exc:
-            logger.warning("pdf_generation_failed", error=str(exc))
-
         return report
 
     # ------------------------------------------------------------------
@@ -317,6 +311,36 @@ class ValuationService:
         if not report:
             raise ValuationNotFoundError(str(valuation_id))
         return report
+
+    # ------------------------------------------------------------------
+    # GET /valuation/{id}/report  (PDF — generated on demand, then cached)
+    # ------------------------------------------------------------------
+    async def get_or_generate_report_pdf(self, valuation_id: uuid.UUID) -> Path:
+        """
+        Returns the path to this valuation's PDF, generating it on first
+        request and reusing the cached file on every subsequent download.
+
+        Comparables are ranked by similarity_score (the same composite
+        distance/type/bedroom/size/recency score used during valuation)
+        so the report shows the strongest matches, not just the first
+        six in whatever order they were saved.
+        """
+        report = await self.get_valuation(valuation_id)
+
+        ranked_comparables = sorted(
+            report.comparables or [],
+            key=lambda c: c.similarity_score if c.similarity_score is not None else 0,
+            reverse=True,
+        )[:6]
+
+        pdf_service = PlaywrightPDFService()
+        pdf_path = await pdf_service.generate(report, report.property, ranked_comparables)
+
+        if report.pdf_path != str(pdf_path):
+            report.pdf_path = str(pdf_path)
+            await self._db.flush()
+
+        return pdf_path
 
     # ------------------------------------------------------------------
     # GET /property/{id}

@@ -77,10 +77,29 @@ export default function ResultsPage() {
       </div>
 
       <div style={{ maxWidth: 880, margin: "0 auto", padding: "32px 20px" }}>
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ fontSize: 13, color: "#999", fontFamily: "sans-serif", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Valuation Report</p>
-          <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", color: "#1a1a1a", marginBottom: 8 }}>{address}</h1>
-          <ConfidenceBadge score={data.confidence_score} />
+        <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <p style={{ fontSize: 13, color: "#999", fontFamily: "sans-serif", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Valuation Report</p>
+            <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", color: "#1a1a1a", marginBottom: 8 }}>{address}</h1>
+            <ConfidenceBadge score={data.confidence_score} />
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <a
+              href={"/api/backend/valuation/" + params?.id + "/report"}
+              download
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "#1a1a1a", color: "white", fontFamily: "sans-serif",
+                fontSize: 14, fontWeight: 600, padding: "12px 20px",
+                borderRadius: 10, textDecoration: "none",
+              }}
+            >
+              Download PDF Report
+            </a>
+            <p style={{ fontSize: 12, color: "#aaa", fontFamily: "sans-serif", marginTop: 6 }}>
+              Takes a few seconds to generate
+            </p>
+          </div>
         </div>
 
         <div className="card" style={{ background: "#1a1a1a", color: "white", borderColor: "#1a1a1a" }}>
