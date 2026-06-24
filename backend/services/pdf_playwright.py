@@ -143,7 +143,7 @@ def _confidence_label(score: float) -> str:
 def _sqft(m2: float | None) -> str:
     if m2 is None:
         return "N/A"
-    return f"{int(m2 * 10.764):,} sqft"
+    return f"{int(float(m2) * 10.764):,} sqft"
 
 
 def _distance(metres: int | None) -> str:
