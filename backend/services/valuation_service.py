@@ -111,6 +111,7 @@ class ValuationService:
                 "epc_rating": hd.get("epc_rating") or hd.get("current_energy_rating"),
                 "property_type": (hd.get("property_type") or "").lower().replace(" ", "_") or None,
                 "bedrooms": hd.get("bedrooms"),
+                "bathrooms": hd.get("bathrooms"),
             }
             last_sold_price = hd.get("last_sold_price") or hd.get("price")
             last_sold_date = hd.get("last_sold_date") or hd.get("sold_date")
@@ -122,6 +123,7 @@ class ValuationService:
                     "epc_rating": hd.get("epc_rating") or hd.get("current_energy_rating"),
                     "property_type": (hd.get("property_type") or "").lower().replace(" ", "_") or None,
                     "bedrooms": hd.get("bedrooms"),
+                    "bathrooms": hd.get("bathrooms"),
                 }
                 last_sold_price = hd.get("last_sold_price") or hd.get("price")
                 last_sold_date = hd.get("last_sold_date") or hd.get("sold_date")
@@ -135,6 +137,8 @@ class ValuationService:
         # Override EPC data with user-provided values if available
         if bedrooms and epc:
             epc["bedrooms"] = bedrooms
+        if bathrooms and epc:
+            epc["bathrooms"] = bathrooms
         if property_type:
             if epc:
                 epc["property_type"] = property_type.replace("-", "_") if property_type else property_type
@@ -147,6 +151,10 @@ class ValuationService:
                 property_.bedrooms = bedrooms
             elif epc and not property_.bedrooms:
                 property_.bedrooms = epc.get("bedrooms")
+            if bathrooms:
+                property_.bathrooms = bathrooms
+            elif epc and not property_.bathrooms:
+                property_.bathrooms = epc.get("bathrooms")
             if epc and epc.get("floor_area_m2"):
                 property_.floor_area_m2 = epc.get("floor_area_m2")
             if epc and epc.get("epc_rating"):
@@ -397,6 +405,7 @@ class ValuationService:
             floor_area_m2=(epc or {}).get("floor_area_m2"),
             epc_rating=(epc or {}).get("epc_rating"),
             bedrooms=(epc or {}).get("bedrooms"),
+            bathrooms=(epc or {}).get("bathrooms"),
             external_ids=external_ids or {},
         )
         self._db.add(property_)

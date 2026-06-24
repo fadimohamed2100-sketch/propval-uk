@@ -337,11 +337,13 @@ class PropertyDataService:
         floor_area = epc_section.get("epc_floor_area") or dims_section.get("predicted_floor_area")
         epc_rating = self._sap_score_to_epc_band(epc_section.get("current_energy_efficiency"))
         bedrooms = rooms_section.get("bedrooms") or rooms_section.get("predicted_bedrooms")
+        bathrooms = rooms_section.get("bathrooms") or data.get("bathrooms")
         property_type = (prop_type_section.get("property_type") or "").lower().replace(" ", "_").replace("-", "_") or None
         return {
             "epc_floor_area": floor_area,
             "epc_rating": epc_rating,
             "bedrooms": bedrooms,
+            "bathrooms": bathrooms,
             "property_type": property_type,
             "last_sold_price": data.get("last_sold", {}).get("last_sold_price_gbp") if isinstance(data.get("last_sold"), dict) else None,
             "last_sold_date": data.get("last_sold", {}).get("last_sold_date") if isinstance(data.get("last_sold"), dict) else None,
