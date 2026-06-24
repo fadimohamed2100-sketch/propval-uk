@@ -240,6 +240,9 @@ def build_context(
             cleaned = re.sub(re.escape(address.postcode), "", cleaned, flags=re.IGNORECASE)
         if address.city:
             cleaned = re.sub(re.escape(address.city), "", cleaned, flags=re.IGNORECASE)
+            if address.city.lower().startswith("greater "):
+                short_city = address.city[len("greater "):]
+                cleaned = re.sub(re.escape(short_city), "", cleaned, flags=re.IGNORECASE)
         cleaned = re.sub(r",\s*,", ",", cleaned)
         cleaned = cleaned.strip().strip(",").strip()
         if cleaned:
