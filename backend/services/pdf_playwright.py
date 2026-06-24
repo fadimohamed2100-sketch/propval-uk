@@ -299,7 +299,7 @@ def build_context(
         # ── Comparables ───────────────────────────────────────
         "comparables": [
             {
-                "street":   comp.address_snapshot.split(",")[0].strip(),
+                "street":   ", ".join(p.strip() for p in comp.address_snapshot.split(",")[:2] if p.strip()) or comp.address_snapshot.strip(),
                 "distance": _distance(comp.distance_m),
                 "type":     (comp.property_type or "").replace("_", " ") or "flat",
                 "size":     _sqft(comp.floor_area_m2),
