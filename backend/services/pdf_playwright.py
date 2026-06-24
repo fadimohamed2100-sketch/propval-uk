@@ -10,6 +10,7 @@ Install:
 """
 from __future__ import annotations
 
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import date
@@ -58,6 +59,7 @@ def compute_chart(
     labels:       list[str],
     y_min: float = 300,
     y_max: float = 500,
+    step:  float = 20,
 ) -> ChartGeometry:
     """
     Convert value series into SVG polyline coordinates.
@@ -81,7 +83,7 @@ def compute_chart(
     subj  = [(to_x(i), to_y(v)) for i, v in enumerate(subject_vals)]
     avg   = [(to_x(i), to_y(v)) for i, v in enumerate(avg_vals)]
 
-    y_tick_vals = list(range(int(y_min), int(y_max) + 1, 20))  # every 20k
+    y_tick_vals = list(range(int(y_min), int(y_max) + 1, max(int(step), 1)))
     y_ticks     = [(to_y(v), f"£{v}k") for v in y_tick_vals]
     grid_lines  = [to_y(v) for v in y_tick_vals]
     x_labels    = [(to_x(i), lbl) for i, lbl in enumerate(labels)]
@@ -97,12 +99,42 @@ def compute_chart(
     )
 
 
-def _default_chart() -> ChartGeometry:
-    """Fallback chart when no historical data is available."""
-    vals   = [415, 418, 410, 395, 365, 328]
-    avg    = [415, 415, 408, 388, 360, 340]
+def _nice_step(span: float) -> int:
+    """Pick a human-friendly axis step (in £k) for a given value span (in £k), aiming for ~6 gridlines."""
+    span = max(span, 1)
+    raw_step = span / 6
+    magnitude = 10 ** max(0, len(str(int(raw_step))) - 1)
+    for mult in (1, 2, 5, 10):
+        step = mult * magnitude
+        if step >= raw_step:
+            return int(step)
+    return int(magnitude * 10)
+
+
+def _default_chart(estimate_gbp: float = 0) -> ChartGeometry:
+    """
+    Fallback chart when no real historical time-series is available.
+    Scales a plausible-looking 5-year trend shape around the property's
+    actual estimated value, so the axis isn't wildly mismatched (e.g. a
+    £300-500k axis for a £1.3M property).
+    """
+    if not estimate_gbp or estimate_gbp <= 0:
+        estimate_gbp = 400_000  # last-resort sane default if no estimate at all
+
+    est_k = estimate_gbp / 1000
+    shape_subject = [1.00, 0.985, 0.93, 0.88, 0.91, 1.00]
+    shape_avg     = [1.00, 0.97,  0.92, 0.86, 0.89, 0.96]
+    vals = [round(est_k * f) for f in shape_subject]
+    avg  = [round(est_k * f) for f in shape_avg]
     labels = ["Jan-21", "Jan-22", "Jan-23", "Jan-24", "Jan-25", "Jan-26"]
-    return compute_chart(vals, avg, labels)
+
+    raw_max = max(vals + avg)
+    raw_min = min(vals + avg)
+    step = _nice_step(raw_max - raw_min)
+    y_max = (int(raw_max / step) + 1) * step
+    y_min = max(0, int(raw_min / step) * step)
+
+    return compute_chart(vals, avg, labels, y_min=y_min, y_max=y_max, step=step)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -200,6 +232,19 @@ def build_context(
     else:
         price_change_str = "N/A"
 
+    unit_identifier = methodology.get("unit_identifier")
+    address1 = address.line_1
+    if unit_identifier:
+        cleaned = unit_identifier
+        if address.postcode:
+            cleaned = re.sub(re.escape(address.postcode), "", cleaned, flags=re.IGNORECASE)
+        if address.city:
+            cleaned = re.sub(re.escape(address.city), "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r",\s*,", ",", cleaned)
+        cleaned = cleaned.strip().strip(",").strip()
+        if cleaned:
+            address1 = cleaned
+
     return {
         # ── Meta ──────────────────────────────────────────────
         "report_id":   str(report.id)[:8].upper(),
@@ -208,7 +253,7 @@ def build_context(
 
         # ── Property ──────────────────────────────────────────
         "property": {
-            "address1":   address.line_1,
+            "address1":   address1,
             "address2":   " ".join(filter(None, [address.line_2, address.city])),
             "postcode":   address.postcode,
             "type":       (property_.property_type or "").replace("_", " ").title() or "N/A",
@@ -227,7 +272,7 @@ def build_context(
             "range_low":      _gbp(report.range_low),
             "range_high":     _gbp(report.range_high),
             "confidence":     _confidence_label(float(report.confidence_score or 0)),
-            "confidence_pct": f"{int((report.confidence_score or 0) * 100)}%",
+            "confidence_pct": f"{round((report.confidence_score or 0) * 100)}%",
             "rental_value":   f"{_gbp(report.rental_monthly)} pcm",
             "gross_yield":    f"{float(report.rental_yield or 0):.1f}%",
             "last_sale_price": _gbp(last_sale_p),
@@ -262,7 +307,7 @@ def build_context(
         ],
 
         # ── Chart ─────────────────────────────────────────────
-        "chart": chart or _default_chart(),
+        "chart": chart or _default_chart(est_gbp),
     }
 
 

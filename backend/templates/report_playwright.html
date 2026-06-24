@@ -220,7 +220,7 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
   border-radius: 1px;
   overflow: hidden;
 }
-.comp-img-google {
+.comp-img-label {
   position: absolute;
   bottom: 4px;
   left: 4px;
@@ -268,8 +268,26 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
 .back-agent-name { font-size: 10pt; font-weight: 700; color: #222; margin-bottom: 6px; }
 .back-agent-detail { font-size: 9.5pt; color: #555; line-height: 1.8; }
 
+.mosaic-wrap { position: relative; }
 .mosaic { display: grid; grid-template-columns: repeat(3, 1fr); height: 230px; }
 .mosaic-cell { position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.mosaic-caption {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 60px;
+  background: rgba(20, 14, 30, .32);
+}
+.mosaic-caption-text {
+  color: white;
+  font-size: 13pt;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-shadow: 0 1px 4px rgba(0,0,0,.35);
+}
 
 .disclaimer-block { padding: 24px 36px; }
 .disclaimer-headline { font-size: 10pt; font-weight: 600; color: #333; line-height: 1.5; margin-bottom: 10px; }
@@ -603,7 +621,7 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
             <rect x="28" y="44" width="20" height="22" rx="1" fill="none" stroke="white" stroke-width="2"/>
             <rect x="60" y="44" width="20" height="22" rx="1" fill="none" stroke="white" stroke-width="2"/>
           </svg>
-          <span class="comp-img-google">Google</span>
+          <span class="comp-img-label">No photo</span>
         </div>
 
         <div class="comp-details">
@@ -727,25 +745,30 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
       </div>
     </div>
 
-    {# Window mosaic — full bleed #}
-    <div class="mosaic" style="margin-top: 20px;">
-      {% set mosaic_colors = ['#C8B96A','#E8E2D8','#C05A38','#DCDCD8','#E4DDD0','#A89888'] %}
-      {% for bg in mosaic_colors %}
-      <div class="mosaic-cell" style="background: {{ bg }};">
-        <svg viewBox="0 0 110 90" width="88" style="opacity:.28;">
-          <rect x="10" y="8"  width="40" height="32" rx="1" fill="none" stroke="white" stroke-width="3"/>
-          <rect x="60" y="8"  width="40" height="32" rx="1" fill="none" stroke="white" stroke-width="3"/>
-          <rect x="10" y="52" width="40" height="30" rx="1" fill="none" stroke="white" stroke-width="3"/>
-          <rect x="60" y="52" width="40" height="30" rx="1" fill="none" stroke="white" stroke-width="3"/>
-          <line x1="30" y1="8"  x2="30" y2="40" stroke="white" stroke-width="1.5"/>
-          <line x1="80" y1="8"  x2="80" y2="40" stroke="white" stroke-width="1.5"/>
-          <line x1="10" y1="24" x2="50" y2="24" stroke="white" stroke-width="1.5"/>
-          <line x1="60" y1="24" x2="100" y2="24" stroke="white" stroke-width="1.5"/>
-          <line x1="30" y1="52" x2="30" y2="82" stroke="white" stroke-width="1.5"/>
-          <line x1="80" y1="52" x2="80" y2="82" stroke="white" stroke-width="1.5"/>
-        </svg>
+    {# Window mosaic — full bleed, decorative brand panel #}
+    <div class="mosaic-wrap" style="margin-top: 20px;">
+      <div class="mosaic">
+        {% set mosaic_colors = ['#C8B96A','#E8E2D8','#C05A38','#DCDCD8','#E4DDD0','#A89888'] %}
+        {% for bg in mosaic_colors %}
+        <div class="mosaic-cell" style="background: {{ bg }};">
+          <svg viewBox="0 0 110 90" width="88" style="opacity:.28;">
+            <rect x="10" y="8"  width="40" height="32" rx="1" fill="none" stroke="white" stroke-width="3"/>
+            <rect x="60" y="8"  width="40" height="32" rx="1" fill="none" stroke="white" stroke-width="3"/>
+            <rect x="10" y="52" width="40" height="30" rx="1" fill="none" stroke="white" stroke-width="3"/>
+            <rect x="60" y="52" width="40" height="30" rx="1" fill="none" stroke="white" stroke-width="3"/>
+            <line x1="30" y1="8"  x2="30" y2="40" stroke="white" stroke-width="1.5"/>
+            <line x1="80" y1="8"  x2="80" y2="40" stroke="white" stroke-width="1.5"/>
+            <line x1="10" y1="24" x2="50" y2="24" stroke="white" stroke-width="1.5"/>
+            <line x1="60" y1="24" x2="100" y2="24" stroke="white" stroke-width="1.5"/>
+            <line x1="30" y1="52" x2="30" y2="82" stroke="white" stroke-width="1.5"/>
+            <line x1="80" y1="52" x2="80" y2="82" stroke="white" stroke-width="1.5"/>
+          </svg>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+      <div class="mosaic-caption">
+        <span class="mosaic-caption-text">Trusted data. Transparent valuations.</span>
+      </div>
     </div>
 
     {# Disclaimer #}
