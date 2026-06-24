@@ -1,3 +1,4 @@
+import re
 import uuid
 from typing import Annotated
 
@@ -204,9 +205,19 @@ async def download_report(
     since it renders via headless Chromium), then serves the cached
     file on every subsequent download for the same valuation.
     """
+    report = await svc.get_valuation(valuation_id)
     pdf_path = await svc.get_or_generate_report_pdf(valuation_id)
 
-    filename = f"valuation_{valuation_id}.pdf"
+    addr = report.property.address if report.property else None
+    address_line = ", ".join(
+        filter(None, [addr.line_1, addr.line_2, addr.city] if addr else [])
+    )
+    postcode = addr.postcode if addr else ""
+    raw_name = f"{address_line} {postcode} valuation".strip()
+    safe_name = re.sub(r"[^\w\s-]", "", raw_name)
+    safe_name = re.sub(r"\s+", " ", safe_name).strip()
+    filename = f"{safe_name or f'valuation_{valuation_id}'}.pdf"
+
     return FileResponse(
         path=str(pdf_path),
         media_type="application/pdf",
