@@ -315,10 +315,13 @@ class ValuationService:
     # ------------------------------------------------------------------
     # GET /valuation/{id}/report  (PDF — generated on demand, then cached)
     # ------------------------------------------------------------------
-    async def get_or_generate_report_pdf(self, valuation_id: uuid.UUID) -> Path:
+    async def get_or_generate_report_pdf(self, valuation_id: uuid.UUID, force: bool = False) -> Path:
         """
         Returns the path to this valuation's PDF, generating it on first
         request and reusing the cached file on every subsequent download.
+
+        Pass force=True to bypass the cache and regenerate from current
+        data — e.g. after correcting a data issue on an existing report.
 
         Comparables are ranked by similarity_score (the same composite
         distance/type/bedroom/size/recency score used during valuation)
@@ -334,7 +337,7 @@ class ValuationService:
         )[:6]
 
         pdf_service = PlaywrightPDFService()
-        pdf_path = await pdf_service.generate(report, report.property, ranked_comparables)
+        pdf_path = await pdf_service.generate(report, report.property, ranked_comparables, force=force)
 
         if report.pdf_path != str(pdf_path):
             report.pdf_path = str(pdf_path)

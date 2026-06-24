@@ -199,14 +199,18 @@ async def get_valuation(
 async def download_report(
     valuation_id: uuid.UUID,
     svc: Annotated[ValuationService, Depends(get_valuation_service)],
+    force: bool = False,
 ) -> FileResponse:
     """
     Generates the branded PDF report on first request (a few seconds,
     since it renders via headless Chromium), then serves the cached
     file on every subsequent download for the same valuation.
+
+    Pass `?force=true` to bypass the cache and regenerate from the
+    current data (e.g. after correcting a data issue retroactively).
     """
     report = await svc.get_valuation(valuation_id)
-    pdf_path = await svc.get_or_generate_report_pdf(valuation_id)
+    pdf_path = await svc.get_or_generate_report_pdf(valuation_id, force=force)
 
     addr = report.property.address if report.property else None
     address_line = ", ".join(
