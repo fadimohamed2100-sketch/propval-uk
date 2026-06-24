@@ -186,6 +186,13 @@ def _distance(metres: int | None) -> str:
     return f"{metres / 1_609.34:.1f} miles"
 
 
+def _weeks_from_days(days: float | None) -> str:
+    if days is None:
+        return "—"
+    weeks = round(days / 7)
+    return str(max(weeks, 1))
+
+
 def build_context(
     report:      ValuationReport,
     property_:   Property,
@@ -287,9 +294,9 @@ def build_context(
         # ── Market ────────────────────────────────────────────
         "market": {
             "area":             mkt.get("area", address.city or "Local area"),
-            "asking_price_pct": mkt.get("asking_price_pct", 96),
-            "weeks_on_market":  mkt.get("weeks_on_market", "—"),
-            "searches":         mkt.get("searches", "—"),
+            "asking_price_pct": mkt.get("asking_price_pct", methodology.get("avg_sale_percent") or 96),
+            "weeks_on_market":  mkt.get("weeks_on_market", _weeks_from_days(methodology.get("avg_time_on_market_days"))),
+            "demand_rating":    mkt.get("demand_rating", methodology.get("market_demand_rating") or "—"),
             "search_area":      mkt.get("search_area", address.postcode.split()[0]),
             "postcode_sector":  mkt.get("postcode_sector", " ".join(address.postcode.split()[:2])[:6]),
             "bedrooms":         property_.bedrooms or 2,

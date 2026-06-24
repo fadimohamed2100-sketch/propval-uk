@@ -270,6 +270,22 @@ class ValuationService:
         if last_sold_price:
             methodology["previous_sale_price_pence"] = int(float(last_sold_price) * 100) if isinstance(last_sold_price, (int, float)) else last_sold_price
             methodology["previous_sale_date"] = str(last_sold_date) if last_sold_date else None
+        if unit_identifier:
+            methodology["unit_identifier"] = unit_identifier
+
+        # Best-effort area market signals — fetched once here, cached in
+        # methodology so the PDF never needs to re-fetch on every download.
+        demand = await self._property_data.get_propertydata_demand(address.postcode)
+        if demand and demand.get("demand_rating"):
+            methodology["market_demand_rating"] = demand["demand_rating"]
+        if uprn:
+            agent_stats = await self._property_data.get_homedata_agent_stats(uprn)
+            if agent_stats:
+                if agent_stats.get("avg_time_on_market_days") is not None:
+                    methodology["avg_time_on_market_days"] = agent_stats["avg_time_on_market_days"]
+                if agent_stats.get("avg_sale_percent") is not None:
+                    methodology["avg_sale_percent"] = agent_stats["avg_sale_percent"]
+
         # Persist ValuationReport
         report = ValuationReport(
             property_id=property_.id,

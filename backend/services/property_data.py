@@ -330,24 +330,94 @@ class PropertyDataService:
         except Exception as e:
             logger.warning("homedata_retrieve_error", error=str(e))
             return None
-        epc_section = data.get("epc", {}) or {}
-        rooms_section = data.get("rooms", {}) or {}
-        dims_section = data.get("dimensions", {}) or {}
-        prop_type_section = data.get("property_type", {}) or {}
-        floor_area = epc_section.get("epc_floor_area") or dims_section.get("predicted_floor_area")
-        epc_rating = self._sap_score_to_epc_band(epc_section.get("current_energy_efficiency"))
-        bedrooms = rooms_section.get("bedrooms") or rooms_section.get("predicted_bedrooms")
-        bathrooms = rooms_section.get("bathrooms") or data.get("bathrooms")
-        property_type = (prop_type_section.get("property_type") or "").lower().replace(" ", "_").replace("-", "_") or None
+        floor_area = data.get("epc_floor_area") or data.get("predicted_floor_area")
+        epc_rating = self._sap_score_to_epc_band(data.get("current_energy_efficiency"))
+        bedrooms = data.get("bedrooms") or data.get("predicted_bedrooms")
+        bathrooms = data.get("bathrooms")
+        property_type = (data.get("property_type") or "").lower().replace(" ", "_").replace("-", "_") or None
         return {
             "epc_floor_area": floor_area,
             "epc_rating": epc_rating,
             "bedrooms": bedrooms,
             "bathrooms": bathrooms,
             "property_type": property_type,
-            "last_sold_price": data.get("last_sold", {}).get("last_sold_price_gbp") if isinstance(data.get("last_sold"), dict) else None,
-            "last_sold_date": data.get("last_sold", {}).get("last_sold_date") if isinstance(data.get("last_sold"), dict) else None,
+            "last_sold_price": data.get("last_sold_price_gbp"),
+            "last_sold_date": data.get("last_sold_date"),
         }
+    async def get_propertydata_demand(self, postcode: str) -> dict | None:
+        """
+        Call PropertyData's /demand endpoint for local buyer-demand analytics.
+        Returns {"demand_rating": "Seller's market" | "Balanced market" | "Buyer's market", ...}
+        or None if unavailable. Best-effort — never blocks the valuation.
+        """
+        if not settings.PROPERTYDATA_API_KEY:
+            return None
+        try:
+            params = {"key": settings.PROPERTYDATA_API_KEY, "postcode": postcode}
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get("https://api.propertydata.co.uk/demand", params=params)
+                if resp.status_code == 200:
+                    body = resp.json()
+                    if body.get("status") == "success":
+                        return body.get("data", {})
+                    logger.warning("propertydata_demand_unsuccessful", body=resp.text[:200])
+                else:
+                    logger.warning("propertydata_demand_non_200", status=resp.status_code)
+        except Exception as e:
+            logger.warning("propertydata_demand_error", error=str(e))
+        return None
+
+    async def get_homedata_agent_stats(self, uprn: str | int) -> dict | None:
+        """
+        Call Homedata's /api/agent_stats/{uprn}/ endpoint to get area-level
+        estate agent performance — used here for average days-on-market and
+        average % of asking price achieved, blended across nearby agents.
+
+        Note: Homedata's docs warn the first call for a new UPRN can take up
+        to ~20s (full aggregation, uncached); subsequent calls are cached
+        and fast. Best-effort — never blocks the valuation.
+        """
+        if not settings.HOMEDATA_API_KEY:
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=25.0) as client:
+                resp = await client.get(
+                    f"https://api.homedata.co.uk/api/agent_stats/{uprn}/",
+                    headers={"Authorization": f"Api-Key {settings.HOMEDATA_API_KEY}"},
+                )
+                if resp.status_code != 200:
+                    logger.warning("homedata_agent_stats_non_200", status=resp.status_code, uprn=str(uprn))
+                    return None
+                payload = resp.json()
+        except Exception as e:
+            logger.warning("homedata_agent_stats_error", error=str(e))
+            return None
+
+        agents = payload if isinstance(payload, list) else (payload.get("results") or [])
+        if not agents:
+            return None
+
+        weighted_dom_sum = 0.0
+        weight_sum = 0.0
+        sale_pct_values: list[float] = []
+        for agent in agents:
+            stats = agent.get("stats", agent) or {}
+            weight = stats.get("listing_count") or stats.get("sales_count") or 1
+            dom = stats.get("avg_time_on_market")
+            if dom is not None:
+                weighted_dom_sum += dom * weight
+                weight_sum += weight
+            pct = stats.get("avg_sale_percent")
+            if pct is not None:
+                sale_pct_values.append(pct)
+
+        avg_dom_days = round(weighted_dom_sum / weight_sum) if weight_sum else None
+        avg_sale_pct = round(sum(sale_pct_values) / len(sale_pct_values), 1) if sale_pct_values else None
+
+        if avg_dom_days is None and avg_sale_pct is None:
+            return None
+        return {"avg_time_on_market_days": avg_dom_days, "avg_sale_percent": avg_sale_pct}
+
     async def close(self) -> None:
         await self._lr_client.aclose()
         await self._epc_client.aclose()
