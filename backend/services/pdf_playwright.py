@@ -243,8 +243,7 @@ def build_context(
     address1 = address.line_1
     if unit_identifier:
         cleaned = unit_identifier
-        if address.postcode:
-            cleaned = re.sub(re.escape(address.postcode), "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"[A-Za-z]{1,2}[0-9][0-9A-Za-z]?\s*[0-9][A-Za-z]{2}", "", cleaned)
         if address.city:
             cleaned = re.sub(re.escape(address.city), "", cleaned, flags=re.IGNORECASE)
             if address.city.lower().startswith("greater "):
