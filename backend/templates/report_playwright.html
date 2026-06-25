@@ -314,7 +314,7 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
         <div class="cover-grid-left">
           <p class="cover-addr">
             {{ property.address1 }}<br>
-            {{ property.address2 }}<br>
+            {% if property.address2 %}{{ property.address2 }}<br>{% endif %}
             {{ property.postcode }}
           </p>
         </div>
@@ -377,7 +377,7 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
     <p class="intro-text">
       This exclusive report provides a unique up-to-date insight into the value of your property
       and analysis of the local market, for
-      <strong>{{ property.address1 }} {{ property.address2 }}, {{ property.postcode }}</strong>
+      <strong>{{ [property.address1, property.address2] | select | join(', ') }}, {{ property.postcode }}</strong>
     </p>
 
     {# 3×2 attribute grid #}
