@@ -239,18 +239,31 @@ def build_context(
     else:
         price_change_str = "N/A"
 
+    def _norm_for_match(s: str) -> str:
+        s = re.sub(r"[A-Za-z]{1,2}[0-9][0-9A-Za-z]?\s*[0-9][A-Za-z]{2}", "", s)  # strip postcode
+        return re.sub(r"[\s\-]+", " ", s).strip().lower()
+
     unit_identifier = methodology.get("unit_identifier")
     address1 = address.line_1
     if unit_identifier:
-        cleaned = unit_identifier
-        cleaned = re.sub(r"[A-Za-z]{1,2}[0-9][0-9A-Za-z]?\s*[0-9][A-Za-z]{2}", "", cleaned)
+        drop_norms = set()
         if address.city:
-            cleaned = re.sub(re.escape(address.city), "", cleaned, flags=re.IGNORECASE)
+            drop_norms.add(_norm_for_match(address.city))
             if address.city.lower().startswith("greater "):
-                short_city = address.city[len("greater "):]
-                cleaned = re.sub(re.escape(short_city), "", cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r",\s*,", ",", cleaned)
-        cleaned = cleaned.strip().strip(",").strip()
+                drop_norms.add(_norm_for_match(address.city[len("greater "):]))
+        if address.line_2:
+            drop_norms.add(_norm_for_match(address.line_2))
+
+        kept_segments = []
+        for seg in unit_identifier.split(","):
+            seg_clean = re.sub(r"[A-Za-z]{1,2}[0-9][0-9A-Za-z]?\s*[0-9][A-Za-z]{2}", "", seg).strip()
+            if not seg_clean:
+                continue
+            if _norm_for_match(seg_clean) in drop_norms:
+                continue
+            kept_segments.append(seg_clean)
+
+        cleaned = ", ".join(kept_segments)
         if cleaned:
             address1 = cleaned
 
@@ -263,7 +276,7 @@ def build_context(
         # ── Property ──────────────────────────────────────────
         "property": {
             "address1":   address1,
-            "address2":   " ".join(filter(None, [address.line_2, address.city])),
+            "address2":   ", ".join(filter(None, [address.line_2, address.city])),
             "postcode":   address.postcode,
             "type":       (property_.property_type or "").replace("_", " ").title() or "N/A",
             "floor_area": _sqft(property_.floor_area_m2),
