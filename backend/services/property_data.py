@@ -330,19 +330,38 @@ class PropertyDataService:
         except Exception as e:
             logger.warning("homedata_retrieve_error", error=str(e))
             return None
-        floor_area = data.get("epc_floor_area") or data.get("predicted_floor_area")
-        epc_rating = self._sap_score_to_epc_band(data.get("current_energy_efficiency"))
-        bedrooms = data.get("bedrooms") or data.get("predicted_bedrooms")
-        bathrooms = data.get("bathrooms")
-        property_type = (data.get("property_type") or "").lower().replace(" ", "_").replace("-", "_") or None
+        epc_section = data.get("epc") if isinstance(data.get("epc"), dict) else {}
+        rooms_section = data.get("rooms") if isinstance(data.get("rooms"), dict) else {}
+        last_sold_section = data.get("last_sold") if isinstance(data.get("last_sold"), dict) else {}
+
+        floor_area = data.get("epc_floor_area") or data.get("predicted_floor_area") or epc_section.get("epc_floor_area")
+        epc_eff = data.get("current_energy_efficiency") or epc_section.get("current_energy_efficiency")
+        epc_rating = self._sap_score_to_epc_band(epc_eff)
+        bedrooms = data.get("bedrooms") or data.get("predicted_bedrooms") or rooms_section.get("bedrooms") or rooms_section.get("predicted_bedrooms")
+        bathrooms = data.get("bathrooms") if not isinstance(data.get("bathrooms"), dict) else None
+        if bathrooms is None:
+            bathrooms = rooms_section.get("bathrooms")
+
+        raw_property_type = data.get("property_type")
+        if isinstance(raw_property_type, dict):
+            raw_property_type = raw_property_type.get("property_type")
+        property_type = (raw_property_type or "").lower().replace(" ", "_").replace("-", "_") or None
+
+        last_sold_price = data.get("last_sold_price_gbp")
+        if last_sold_price is None:
+            last_sold_price = last_sold_section.get("last_sold_price_gbp")
+        last_sold_date = data.get("last_sold_date")
+        if last_sold_date is None:
+            last_sold_date = last_sold_section.get("last_sold_date")
+
         return {
             "epc_floor_area": floor_area,
             "epc_rating": epc_rating,
             "bedrooms": bedrooms,
             "bathrooms": bathrooms,
             "property_type": property_type,
-            "last_sold_price": data.get("last_sold_price_gbp"),
-            "last_sold_date": data.get("last_sold_date"),
+            "last_sold_price": last_sold_price,
+            "last_sold_date": last_sold_date,
         }
     async def get_propertydata_demand(self, postcode: str) -> dict | None:
         """
