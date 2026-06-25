@@ -172,16 +172,24 @@ class ValuationService:
         pd_type_map = {"flat": "flat", "terraced": "terraced", "semi_detached": "semi-detached", "detached": "detached", "other": "terraced"}
         pd_property_type = pd_type_map.get(property_.property_type or "other", "terraced")
         raw_sales = await self._property_data.get_propertydata_sold_prices(address.postcode, pd_property_type, bedrooms=effective_bedrooms, tenure=tenure)
+        used_propertydata_sales = bool(raw_sales)
         if not raw_sales:
             from sqlalchemy import text
+            # Restrict the seed-data fallback to the subject's postcode AREA
+            # (the outcode, e.g. "DH2" from "DH2 3LT") so a thin/empty real
+            # dataset never silently falls back to unrelated sales from
+            # wherever the seed data happens to be concentrated.
+            outcode = address.postcode.split()[0] if address.postcode else ""
             result = await self._db.execute(
                 text("""
                     SELECT a.address_norm, a.postcode, st.price_pence, st.transaction_date, p.property_type, st.source
                     FROM sales_transactions st
                     JOIN properties p ON st.property_id = p.id
                     JOIN addresses a ON p.address_id = a.id
+                    WHERE a.postcode LIKE :outcode_pattern
                     LIMIT 50
-                """)
+                """),
+                {"outcode_pattern": f"{outcode}%"},
             )
             raw_sales = [
                 {"address": r[0], "postcode": r[1], "price_pence": int(r[2]), "transaction_date": r[3].isoformat() if hasattr(r[3], "isoformat") else str(r[3]), "source": r[5]}
@@ -297,7 +305,7 @@ class ValuationService:
             rental_monthly=result.rental_monthly,
             rental_yield=result.rental_yield,
             methodology=methodology,
-            source_apis=["propertydata"] + (["epc"] if epc else []) + (["homedata"] if uprn else []),
+            source_apis=(["propertydata"] if used_propertydata_sales else []) + (["epc"] if epc else []) + (["homedata"] if uprn else []),
             status="complete",
         )
         self._db.add(report)

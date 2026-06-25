@@ -85,7 +85,7 @@ class ValuationEngine:
     """
 
     MAX_COMP_AGE_YEARS = 3
-    MIN_COMPS = 0
+    MIN_COMPS = 3
     CONFIDENCE_FLOOR = 0.40
 
     def run(
