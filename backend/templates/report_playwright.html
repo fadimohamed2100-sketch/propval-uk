@@ -140,15 +140,13 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
 
 /* ── Market insights ───────────────────────────────────────── */
 .insights-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: block;
   background: white;
   border: 1px solid var(--card-border);
   border-radius: 2px;
   box-shadow: 0 1px 3px rgba(0,0,0,.05);
 }
-.insights-left  { padding: 18px; border-right: 1.5px dashed #D1D5DB; }
-.insights-right { padding: 18px; }
+.insights-left  { padding: 18px; }
 
 .area-label { font-size: 8pt; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
 
@@ -528,53 +526,6 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
           </p>
         </div>
       </div>{# end insights-left #}
-
-      {# RIGHT: weeks on market + searches #}
-      <div class="insights-right">
-        {% if market.weeks_on_market != '—' %}
-        <div class="weeks-row">
-          <div class="weeks-box">
-            <span class="weeks-num">{{ market.weeks_on_market }}</span>
-          </div>
-          <div class="weeks-side">
-            <div class="weeks-word">weeks</div>
-            <div class="weeks-sub">on market</div>
-          </div>
-        </div>
-        <p class="insight-desc">
-          Properties near you spend an average time on the market of
-          <strong>{{ market.weeks_on_market }} weeks</strong>
-        </p>
-        {% else %}
-        <p class="insight-desc" style="color:#999;">
-          Average time on market data not available for this area.
-        </p>
-        {% endif %}
-
-        <hr class="insight-divider" style="margin-top:16px;">
-
-        {% if market.demand_rating != '—' %}
-        <div class="searches-row">
-          <div class="searches-box">
-            <span class="searches-val">{{ market.demand_rating }}</span>
-          </div>
-          <div class="search-icon">
-            <svg viewBox="0 0 20 20" width="18" height="18">
-              <circle cx="9" cy="9" r="5.5" fill="none" stroke="#4B2590" stroke-width="2"/>
-              <line x1="13.5" y1="13.5" x2="17" y2="17" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-        </div>
-        <p class="insight-desc">
-          Current conditions in {{ market.search_area }} are classed as a
-          <strong>{{ market.demand_rating }}</strong>, based on recent buyer demand data
-        </p>
-        {% else %}
-        <p class="insight-desc" style="color:#999; margin-top:8px;">
-          Market demand data not available for this area.
-        </p>
-        {% endif %}
-      </div>
     </div>{# end insights-grid #}
 
   </div>{# end page-inner #}
