@@ -306,7 +306,11 @@ async def fetch_real_price_chart(postcode: str, estimate_gbp: float) -> ChartGeo
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
                 f"https://landregistry.data.gov.uk/data/ukhpi/region/{region}.json",
-                params={"_pageSize": 72},
+                params={
+                    "_pageSize": 72,
+                    "_view": "basic",
+                    "_properties": "housePriceIndex,refMonth,refPeriodStart,refPeriodDuration,salesVolume,averagePrice",
+                },
                 headers={"Accept": "application/json"},
             )
             if resp.status_code != 200:
@@ -317,7 +321,7 @@ async def fetch_real_price_chart(postcode: str, estimate_gbp: float) -> ChartGeo
         return None
 
     items = (body.get("result") or {}).get("items") or body.get("items") or []
-    items = [it for it in items if it.get("averagePrice") and it.get("refMonth")]
+    items = [it for it in items if isinstance(it, dict) and it.get("averagePrice") and it.get("refMonth")]
     if len(items) < 13:
         return None
 
