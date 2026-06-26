@@ -228,6 +228,13 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
   padding: 1px 4px;
   border-radius: 1px;
 }
+.comp-img-real {
+  width: 108px;
+  height: 74px;
+  object-fit: cover;
+  display: block;
+  border-radius: 1px;
+}
 .comp-details { font-size: 8.5pt; line-height: 1.65; }
 .comp-street  { font-weight: 700; font-size: 9.5pt; color: var(--purple); margin-bottom: 1px; }
 .comp-meta    { color: #555; }
@@ -564,6 +571,11 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
         {{ 'comp-cell-border-right' if col == 0 else '' }}
         {{ 'comp-cell-border-bottom' if row < total_rows - 1 else '' }}
       ">
+        {% if comp.photo_uri %}
+        <div class="comp-img">
+          <img src="{{ comp.photo_uri }}" class="comp-img-real" alt="">
+        </div>
+        {% else %}
         {# Street-view style placeholder #}
         <div class="comp-img">
           <svg viewBox="0 0 108 74" width="108" height="74" style="position:absolute;inset:0;opacity:.18;">
@@ -574,6 +586,7 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
           </svg>
           <span class="comp-img-label">No photo</span>
         </div>
+        {% endif %}
 
         <div class="comp-details">
           <p class="comp-street">{{ comp.street }}</p>

@@ -10,6 +10,8 @@ Install:
 """
 from __future__ import annotations
 
+import asyncio
+import base64
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -17,6 +19,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+import httpx
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright, Page
 
@@ -193,6 +196,76 @@ def _weeks_from_days(days: float | None) -> str:
     return str(max(weeks, 1))
 
 
+async def _fetch_street_view_photo(location: str) -> str | None:
+    """
+    Fetch a Street View image for a free-text address/location string,
+    returned as a base64 data: URI so it's embedded directly in the PDF
+    (no live URL, no API key baked into the output file).
+
+    Checks the metadata endpoint first — Street View Static API returns a
+    200 OK with a generic "no imagery" placeholder rather than an error
+    when there's no real coverage, so we check status explicitly rather
+    than just trusting a 200 response.
+
+    Best-effort: returns None on any failure, missing key, or no coverage.
+    """
+    if not settings.GOOGLE_MAPS_API_KEY:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            meta = await client.get(
+                "https://maps.googleapis.com/maps/api/streetview/metadata",
+                params={"location": location, "key": settings.GOOGLE_MAPS_API_KEY},
+            )
+            meta_body = meta.json()
+            if meta_body.get("status") != "OK":
+                return None
+
+            img_resp = await client.get(
+                "https://maps.googleapis.com/maps/api/streetview",
+                params={
+                    "size": "216x148",
+                    "location": location,
+                    "fov": 80,
+                    "key": settings.GOOGLE_MAPS_API_KEY,
+                },
+            )
+            if img_resp.status_code != 200:
+                return None
+            encoded = base64.b64encode(img_resp.content).decode("ascii")
+            return f"data:image/jpeg;base64,{encoded}"
+    except Exception as e:
+        logger.warning("street_view_fetch_error", location=location, error=str(e))
+        return None
+
+
+async def fetch_comparable_photos(comparables: list[Comparable]) -> dict[str, str]:
+    """
+    Fetch Street View photos for a list of comparables concurrently.
+    Returns {comparable_id_str: data_uri} for whichever ones succeeded —
+    comparables with no coverage or any error are simply omitted, so the
+    template can fall back to the decorative placeholder for those.
+    """
+    if not settings.GOOGLE_MAPS_API_KEY or not comparables:
+        return {}
+
+    async def _one(comp: Comparable) -> tuple[str, str | None]:
+        location = f"{comp.address_snapshot}, {comp.postcode_snapshot}"
+        uri = await _fetch_street_view_photo(location)
+        return str(comp.id), uri
+
+    try:
+        results = await asyncio.wait_for(
+            asyncio.gather(*(_one(c) for c in comparables)),
+            timeout=20.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("street_view_batch_timeout", count=len(comparables))
+        return {}
+
+    return {comp_id: uri for comp_id, uri in results if uri}
+
+
 def build_context(
     report:      ValuationReport,
     property_:   Property,
@@ -200,6 +273,7 @@ def build_context(
     agent_name:  str = "PropVal",
     chart:       ChartGeometry | None = None,
     market_data: dict[str, Any] | None = None,
+    photo_uris:  dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Assemble the full Jinja2 template context from ORM objects.
@@ -324,6 +398,7 @@ def build_context(
                 "size":     _sqft(comp.floor_area_m2),
                 "price":    _gbp(comp.sale_price),
                 "date":     _fmt_date(comp.sale_date),
+                "photo_uri": (photo_uris or {}).get(str(comp.id)),
             }
             for comp in comparables[:6]
         ],
@@ -419,6 +494,8 @@ class PlaywrightPDFService:
 
         logger.info("pdf_generating", valuation_id=str(report.id))
 
+        photo_uris = await fetch_comparable_photos(comparables[:6])
+
         context = build_context(
             report=report,
             property_=property_,
@@ -426,6 +503,7 @@ class PlaywrightPDFService:
             agent_name=agent_name,
             chart=chart,
             market_data=market_data,
+            photo_uris=photo_uris,
         )
 
         try:
