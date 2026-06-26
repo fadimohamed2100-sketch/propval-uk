@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Search, MapPin, TrendingUp, Building2, Sparkles } from "lucide-react";
 import { runValuation } from "@/lib/api";
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth, useClerk } from "@clerk/nextjs";
@@ -360,8 +361,8 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-ink-faint">
           <span>© 2026 PropVal. Not a RICS-compliant valuation.</span>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-ink transition-colors">Privacy</a>
-            <a href="#" className="hover:text-ink transition-colors">Terms</a>
+            <Link href="/privacy" className="hover:text-ink transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-ink transition-colors">Terms</Link>
             <a href="#" className="hover:text-ink transition-colors">API Docs</a>
           </div>
         </div>
