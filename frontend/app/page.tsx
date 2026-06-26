@@ -118,7 +118,6 @@ export default function HomePage() {
         </span>
         <div className="flex items-center gap-6 text-sm text-ink-muted">
           <a href="#how" className="hover:text-ink transition-colors">How it works</a>
-          <a href="#" className="hover:text-ink transition-colors">API</a>
           <SignedIn>
             <a href="/history" className="hover:text-ink transition-colors">History</a>
           </SignedIn>
@@ -363,7 +362,6 @@ export default function HomePage() {
           <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-ink transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-ink transition-colors">Terms</Link>
-            <a href="#" className="hover:text-ink transition-colors">API Docs</a>
           </div>
         </div>
       </footer>
