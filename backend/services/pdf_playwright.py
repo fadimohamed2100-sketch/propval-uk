@@ -196,6 +196,154 @@ def _weeks_from_days(days: float | None) -> str:
     return str(max(weeks, 1))
 
 
+# Maps UK postcode AREA prefixes (the letters before the digits, e.g. "DH"
+# from "DH2 3LT") to HM Land Registry UK House Price Index region slugs.
+# This is deliberately broad-region rather than local-authority level —
+# fewer, larger regions means far more reliable coverage and a much
+# simpler, lower-risk lookup than trying to map every postcode to one of
+# 441 granular local authorities.
+_POSTCODE_AREA_TO_HPI_REGION: dict[str, str] = {
+    # Scotland
+    "AB": "scotland", "DD": "scotland", "DG": "scotland", "EH": "scotland",
+    "FK": "scotland", "G": "scotland", "HS": "scotland", "IV": "scotland",
+    "KA": "scotland", "KW": "scotland", "KY": "scotland", "ML": "scotland",
+    "PA": "scotland", "PH": "scotland", "TD": "scotland", "ZE": "scotland",
+    # Wales
+    "CF": "wales", "LD": "wales", "LL": "wales", "NP": "wales",
+    "SA": "wales", "SY": "wales",
+    # Northern Ireland
+    "BT": "northern-ireland",
+    # North East England
+    "NE": "north-east", "SR": "north-east", "DH": "north-east", "DL": "north-east",
+    "TS": "north-east",
+    # North West England
+    "CA": "north-west", "CH": "north-west", "CW": "north-west", "BB": "north-west",
+    "BL": "north-west", "FY": "north-west", "L": "north-west", "LA": "north-west",
+    "M": "north-west", "OL": "north-west", "PR": "north-west", "SK": "north-west",
+    "WA": "north-west", "WN": "north-west",
+    # Yorkshire and The Humber
+    "BD": "yorkshire-and-the-humber", "DN": "yorkshire-and-the-humber",
+    "HD": "yorkshire-and-the-humber", "HG": "yorkshire-and-the-humber",
+    "HU": "yorkshire-and-the-humber", "HX": "yorkshire-and-the-humber",
+    "LS": "yorkshire-and-the-humber", "S": "yorkshire-and-the-humber",
+    "WF": "yorkshire-and-the-humber", "YO": "yorkshire-and-the-humber",
+    # East Midlands
+    "DE": "east-midlands", "LE": "east-midlands", "LN": "east-midlands",
+    "NG": "east-midlands", "NN": "east-midlands",
+    # West Midlands
+    "B": "west-midlands", "CV": "west-midlands", "DY": "west-midlands",
+    "HR": "west-midlands", "ST": "west-midlands", "TF": "west-midlands",
+    "WS": "west-midlands", "WR": "west-midlands", "WV": "west-midlands",
+    # East of England
+    "CB": "east-of-england", "CM": "east-of-england", "CO": "east-of-england",
+    "IP": "east-of-england", "NR": "east-of-england", "PE": "east-of-england",
+    "SG": "east-of-england", "SS": "east-of-england", "AL": "east-of-england",
+    "LU": "east-of-england", "MK": "east-of-england",
+    # London
+    "E": "london", "EC": "london", "N": "london", "NW": "london",
+    "SE": "london", "SW": "london", "W": "london", "WC": "london",
+    "BR": "london", "CR": "london", "DA": "london", "EN": "london",
+    "HA": "london", "IG": "london", "KT": "london", "RM": "london",
+    "SM": "london", "TW": "london", "UB": "london",
+    # South East
+    "BN": "south-east", "GU": "south-east", "ME": "south-east", "OX": "south-east",
+    "PO": "south-east", "RG": "south-east", "RH": "south-east", "SL": "south-east",
+    "SO": "south-east", "TN": "south-east",
+    # South West
+    "BA": "south-west", "BH": "south-west", "BS": "south-west", "DT": "south-west",
+    "EX": "south-west", "GL": "south-west", "PL": "south-west", "SN": "south-west",
+    "SP": "south-west", "TA": "south-west", "TQ": "south-west", "TR": "south-west",
+}
+
+
+def _postcode_to_hpi_region(postcode: str) -> str:
+    """
+    Map a UK postcode to an HM Land Registry UK HPI region slug.
+    Falls back to 'england-and-wales' (still real, genuine data, just
+    less granular) if the postcode area isn't in our lookup table.
+    """
+    if not postcode:
+        return "england-and-wales"
+    outcode = postcode.strip().upper().split()[0]
+    # Postcode area = leading letters only (e.g. "DH" from "DH2", "EC" from "EC1N")
+    area = "".join(ch for ch in outcode if ch.isalpha())
+    # Try longest-prefix match first (e.g. "EC" before "E")
+    for length in (2, 1):
+        candidate = area[:length]
+        if candidate in _POSTCODE_AREA_TO_HPI_REGION:
+            return _POSTCODE_AREA_TO_HPI_REGION[candidate]
+    return "england-and-wales"
+
+
+def _format_hpi_label(ref_month: str) -> str:
+    """Format a 'YYYY-MM' refMonth string as e.g. 'Apr-23'."""
+    try:
+        year, month = ref_month.split("-")
+        month_name = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][int(month) - 1]
+        return f"{month_name}-{year[2:]}"
+    except Exception:
+        return ref_month
+
+
+async def fetch_real_price_chart(postcode: str, estimate_gbp: float) -> ChartGeometry | None:
+    """
+    Fetch real regional house-price-trend data from HM Land Registry's
+    UK House Price Index (free, no API key, official government statistics)
+    and build a genuine 5-year trend chart from it, instead of the synthetic
+    decorative curve every report would otherwise show.
+
+    The "average area price" line is the real regional average price.
+    The "this property" line applies that same real year-on-year % change
+    to the property's actual current estimate, so it's grounded in a real
+    trend shape while still being correctly anchored to this property's value.
+
+    Best-effort: returns None on any failure, so the caller can fall back
+    to the synthetic chart rather than breaking PDF generation.
+    """
+    region = _postcode_to_hpi_region(postcode)
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"https://landregistry.data.gov.uk/data/ukhpi/region/{region}.json",
+                params={"_pageSize": 72},
+                headers={"Accept": "application/json"},
+            )
+            if resp.status_code != 200:
+                return None
+            body = resp.json()
+    except Exception as e:
+        logger.warning("uk_hpi_fetch_error", region=region, error=str(e))
+        return None
+
+    items = (body.get("result") or {}).get("items") or body.get("items") or []
+    items = [it for it in items if it.get("averagePrice") and it.get("refMonth")]
+    if len(items) < 13:
+        return None
+
+    items.sort(key=lambda it: it["refMonth"], reverse=True)
+
+    # Pick one reading per year, 12 months apart, for a 5-year trend
+    step_indices = [i for i in (60, 48, 36, 24, 12, 0) if i < len(items)]
+    if len(step_indices) < 4:
+        return None
+    chosen = [items[i] for i in step_indices]  # oldest → newest
+
+    avg_prices_k = [c["averagePrice"] / 1000 for c in chosen]
+    latest_avg_k = avg_prices_k[-1]
+    est_k = (estimate_gbp / 1000) if estimate_gbp else latest_avg_k
+    subject_prices_k = [est_k * (p / latest_avg_k) for p in avg_prices_k]
+    labels = [_format_hpi_label(c["refMonth"]) for c in chosen]
+
+    raw_max = max(avg_prices_k + subject_prices_k)
+    raw_min = min(avg_prices_k + subject_prices_k)
+    step = _nice_step(raw_max - raw_min)
+    y_max = (int(raw_max / step) + 1) * step
+    y_min = max(0, int(raw_min / step) * step)
+
+    return compute_chart(subject_prices_k, avg_prices_k, labels, y_min=y_min, y_max=y_max, step=step)
+
+
 async def _fetch_street_view_photo(location: str) -> str | None:
     """
     Fetch a Street View image for a free-text address/location string,
@@ -494,14 +642,18 @@ class PlaywrightPDFService:
 
         logger.info("pdf_generating", valuation_id=str(report.id))
 
-        photo_uris = await fetch_comparable_photos(comparables[:6])
+        est_gbp = report.estimated_value / 100 if report.estimated_value else 0
+        photo_uris, real_chart = await asyncio.gather(
+            fetch_comparable_photos(comparables[:6]),
+            fetch_real_price_chart(property_.address.postcode, est_gbp),
+        )
 
         context = build_context(
             report=report,
             property_=property_,
             comparables=comparables,
             agent_name=agent_name,
-            chart=chart,
+            chart=chart or real_chart,
             market_data=market_data,
             photo_uris=photo_uris,
         )
