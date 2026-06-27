@@ -130,9 +130,11 @@ class ValuationService:
                 fresh_homedata_for_create = {"uprn": uprn, "homedata": hd}
                 if property_:
                     property_.external_ids = {**cached_external_ids, "uprn": uprn, "homedata": hd}
+        epc_is_register_source = False
         if not epc:
             epc_match_line = f"{unit_identifier} {address.line_1}" if unit_identifier else address.line_1
             epc = await self._property_data.get_epc_data(address.postcode, line_1=epc_match_line)
+            epc_is_register_source = True
 
         # Override EPC data with user-provided values if available
         if bedrooms and epc:
@@ -280,6 +282,20 @@ class ValuationService:
             methodology["previous_sale_date"] = str(last_sold_date) if last_sold_date else None
         if unit_identifier:
             methodology["unit_identifier"] = unit_identifier
+
+        # Construction age band & habitable room count, for "year built" and
+        # "receptions" in the report. EPC register data already has these
+        # directly if that was our enrichment source; otherwise (Homedata
+        # matched via UPRN) make one extra lightweight EPC lookup just for
+        # this — Homedata doesn't carry construction age band.
+        epc_for_enrichment = epc if epc_is_register_source else None
+        if not epc_for_enrichment:
+            epc_for_enrichment = await self._property_data.get_epc_data(address.postcode, line_1=address.line_1)
+        if epc_for_enrichment:
+            if epc_for_enrichment.get("construction_age_band"):
+                methodology["construction_age_band"] = epc_for_enrichment["construction_age_band"]
+            if epc_for_enrichment.get("habitable_rooms"):
+                methodology["habitable_rooms"] = epc_for_enrichment["habitable_rooms"]
 
         # Best-effort area market signals — fetched once here, cached in
         # methodology so the PDF never needs to re-fetch on every download.

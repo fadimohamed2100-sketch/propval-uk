@@ -122,13 +122,14 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
 /* ── Property summary page ─────────────────────────────────── */
 .intro-text { font-size: 10pt; color: #444; line-height: 1.6; margin-bottom: 22px; }
 
-.attr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 26px; }
+.attr-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
 .attr-card {
   background: white;
   border: 1px solid var(--card-border);
   border-radius: 2px;
   padding: 18px 10px;
   display: flex;
+  flex: 1 1 140px;
   flex-direction: column;
   align-items: center;
   text-align: center;
@@ -410,6 +411,7 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
         <p class="attr-value">{{ property.floor_area }}</p>
       </div>
 
+      {% if property.year_built %}
       {# Year built #}
       <div class="attr-card">
         <svg class="attr-icon" viewBox="0 0 44 44">
@@ -421,7 +423,9 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
         <p class="attr-label">Year built</p>
         <p class="attr-value">{{ property.year_built }}</p>
       </div>
+      {% endif %}
 
+      {% if property.receptions %}
       {# Receptions #}
       <div class="attr-card">
         <svg class="attr-icon" viewBox="0 0 44 44">
@@ -435,6 +439,7 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
         <p class="attr-label">Receptions</p>
         <p class="attr-value">{{ property.receptions }}</p>
       </div>
+      {% endif %}
 
       {# Bedrooms #}
       <div class="attr-card">

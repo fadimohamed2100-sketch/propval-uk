@@ -134,7 +134,13 @@ class PropertyDataService:
             "epc_rating": (row.get("current-energy-rating") or "")[:1].upper() or None,
             "property_type": row.get("property-type", "").lower().replace(" ", "_"),
             "inspection_date": row.get("inspection-date"),
-            "bedrooms": int(row.get("number-habitable-rooms", 0) or 0) or None,
+            # NOTE: EPC's "number-habitable-rooms" is bedrooms + receptions + studies
+            # combined, NOT a bedroom count. Kept separate (not aliased to
+            # "bedrooms") so callers can derive receptions = habitable_rooms - bedrooms
+            # using whatever bedroom count is confirmed from elsewhere, rather than
+            # silently treating total habitable rooms as if it were the bedroom count.
+            "habitable_rooms": int(row.get("number-habitable-rooms", 0) or 0) or None,
+            "construction_age_band": row.get("construction-age-band") or None,
         }
 
 

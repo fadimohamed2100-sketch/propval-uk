@@ -439,20 +439,10 @@ def build_context(
     # Price change vs last sale (if we have it in methodology)
     methodology   = report.methodology or {}
     est_gbp       = report.estimated_value / 100 if report.estimated_value else 0
-    last_sale_raw = methodology.get("last_sale_price_gbp") or methodology.get(
-        "supporting", {}
-    )
-    last_sale_p   = None
-    last_sale_dt  = None
 
-    # Try to extract last sale from methodology supporting data
-    for m in (report.methodology.get("blend_inputs") or []):
-        if m.get("method") == "last_sale_growth":
-            sup = m.get("supporting") or {}
-            if sup.get("last_sale_price_gbp"):
-                last_sale_p  = int(sup["last_sale_price_gbp"] * 100)
-                last_sale_dt = sup.get("last_sale_date")
-            break
+    last_sale_p_raw = methodology.get("previous_sale_price_pence")
+    last_sale_p   = int(last_sale_p_raw) if last_sale_p_raw else None
+    last_sale_dt  = methodology.get("previous_sale_date")
 
     price_change_pence = (
         (report.estimated_value - last_sale_p)
@@ -493,6 +483,19 @@ def build_context(
         if cleaned:
             address1 = cleaned
 
+    year_built_val = None
+    if property_.year_built:
+        year_built_val = str(property_.year_built)
+    elif methodology.get("construction_age_band"):
+        year_built_val = methodology["construction_age_band"]
+
+    receptions_val = None
+    habitable_rooms = methodology.get("habitable_rooms")
+    if habitable_rooms and property_.bedrooms is not None:
+        calc = habitable_rooms - property_.bedrooms
+        if calc >= 0:
+            receptions_val = str(calc)
+
     return {
         # ── Meta ──────────────────────────────────────────────
         "report_id":   str(report.id)[:8].upper(),
@@ -506,8 +509,8 @@ def build_context(
             "postcode":   address.postcode,
             "type":       (property_.property_type or "").replace("_", " ").title() or "N/A",
             "floor_area": _sqft(property_.floor_area_m2),
-            "year_built": str(property_.year_built) if property_.year_built else "N/A",
-            "receptions": "N/A",
+            "year_built": year_built_val,
+            "receptions": receptions_val,
             "bedrooms":   property_.bedrooms if property_.bedrooms is not None else "N/A",
             "bathrooms":  property_.bathrooms if property_.bathrooms is not None else "N/A",
             "epc":        property_.epc_rating or "N/A",
