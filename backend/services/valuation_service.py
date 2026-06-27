@@ -14,6 +14,7 @@ from __future__ import annotations
 from core.config import get_settings
 settings = get_settings()
 
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -210,6 +211,32 @@ class ValuationService:
             if filtered_sales:
                 raw_sales = filtered_sales
 
+        # Check whether the subject property's own historical sale appears in
+        # this same official Land Registry sold-prices dataset. If so, it's a
+        # confirmed real price+date for THIS property (more reliable than
+        # Homedata, which can return a date with no price) - use it, and
+        # exclude it from the comparables list since it's the subject itself,
+        # not a comparable to it.
+        own_sale_price_pence = None
+        own_sale_date_iso = None
+        num_match = re.search(r"\d+", address.line_1 or "")
+        target_num = num_match.group() if num_match else None
+        if target_num:
+            target_words = set(re.findall(r"[a-zA-Z]+", address.line_1.lower())) - {"road", "street", "avenue", "lane", "close", "drive", "way", "court"}
+            own_sale_idx = None
+            for i, s in enumerate(raw_sales):
+                sale_addr_lower = (s.get("address") or "").lower()
+                if not re.search(r"\b" + re.escape(target_num) + r"\b", sale_addr_lower):
+                    continue
+                sale_words = set(re.findall(r"[a-zA-Z]+", sale_addr_lower)) - {"road", "street", "avenue", "lane", "close", "drive", "way", "court"}
+                if target_words & sale_words:
+                    own_sale_price_pence = s.get("price_pence")
+                    own_sale_date_iso = s.get("transaction_date")
+                    own_sale_idx = i
+                    break
+            if own_sale_idx is not None:
+                raw_sales = raw_sales[:own_sale_idx] + raw_sales[own_sale_idx + 1:]
+
         comp_inputs = [
             ComparableInput(
                 address=s["address"],
@@ -284,6 +311,10 @@ class ValuationService:
             methodology["previous_sale_price_pence"] = int(float(last_sold_price) * 100) if isinstance(last_sold_price, (int, float)) else last_sold_price
         if last_sold_date:
             methodology["previous_sale_date"] = str(last_sold_date)
+        if own_sale_price_pence:
+            methodology["previous_sale_price_pence"] = int(own_sale_price_pence)
+        if own_sale_date_iso:
+            methodology["previous_sale_date"] = str(own_sale_date_iso)
         if unit_identifier:
             methodology["unit_identifier"] = unit_identifier
 
