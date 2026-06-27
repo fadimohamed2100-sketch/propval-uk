@@ -444,6 +444,16 @@ def build_context(
     last_sale_p   = int(last_sale_p_raw) if last_sale_p_raw else None
     last_sale_dt  = methodology.get("previous_sale_date")
 
+    if last_sale_p is not None:
+        last_sale_display = _gbp(last_sale_p)
+        last_sale_sub = _fmt_date(last_sale_dt) if last_sale_dt else None
+    elif last_sale_dt:
+        last_sale_display = _fmt_date(last_sale_dt)
+        last_sale_sub = None
+    else:
+        last_sale_display = "N/A"
+        last_sale_sub = None
+
     price_change_pence = (
         (report.estimated_value - last_sale_p)
         if last_sale_p and report.estimated_value
@@ -526,8 +536,8 @@ def build_context(
             "confidence_pct": f"{round((report.confidence_score or 0) * 100)}%",
             "rental_value":   f"{_gbp(report.rental_monthly)} pcm",
             "gross_yield":    f"{float(report.rental_yield or 0):.1f}%",
-            "last_sale_price": _gbp(last_sale_p),
-            "last_sale_date":  _fmt_date(last_sale_dt),
+            "last_sale_price": last_sale_display,
+            "last_sale_date":  last_sale_sub or "N/A",
             "price_change":    price_change_str,
             "source_apis":     ", ".join(report.source_apis or []),
         },

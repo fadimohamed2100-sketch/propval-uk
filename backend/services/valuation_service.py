@@ -275,11 +275,15 @@ class ValuationService:
             result.range_low = int(result.range_low * lease_adjustment)
             result.range_high = int(result.range_high * lease_adjustment)
 
-        # Inject previous sale info (from Homedata UPRN lookup) into methodology, if available
+        # Inject previous sale info (from Homedata UPRN lookup) into methodology, if available.
+        # Price and date are stored independently - Homedata sometimes returns one
+        # without the other (e.g. a real sold date with a missing price), and a
+        # missing price shouldn't cause a perfectly real date to be discarded too.
         methodology = dict(result.methodology)
         if last_sold_price:
             methodology["previous_sale_price_pence"] = int(float(last_sold_price) * 100) if isinstance(last_sold_price, (int, float)) else last_sold_price
-            methodology["previous_sale_date"] = str(last_sold_date) if last_sold_date else None
+        if last_sold_date:
+            methodology["previous_sale_date"] = str(last_sold_date)
         if unit_identifier:
             methodology["unit_identifier"] = unit_identifier
 
