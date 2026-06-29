@@ -466,7 +466,7 @@ class PropertyDataService:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(
                     "https://landregistry.data.gov.uk/data/ppi/transaction-record.json",
-                    params={"propertyAddress.postcode": postcode, "_pageSize": 100},
+                    params={"propertyAddress.postcode": postcode, "_pageSize": 100, "_view": "basic"},
                     headers={"Accept": "application/json"},
                 )
                 if resp.status_code != 200:
@@ -480,6 +480,8 @@ class PropertyDataService:
         logger.info("land_registry_lookup", postcode=postcode, line_1=line_1, items_returned=len(items))
         if not items:
             return None
+        if not any(isinstance(it, dict) and isinstance(it.get("propertyAddress"), dict) for it in items):
+            logger.warning("land_registry_unexpected_shape", sample=str(items[0])[:500])
 
         num_match = re.search(r"\d+", line_1)
         target_num = num_match.group() if num_match else None
