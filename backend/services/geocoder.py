@@ -64,21 +64,46 @@ class GeocoderService:
         logger.info("geocoding_address", address=address)
         results = await self._query_nominatim(address)
 
+        expected_postcode_match = re.search(
+            r"[A-Za-z]{1,2}[0-9][0-9A-Za-z]?\s*[0-9][A-Za-z]{2}", address
+        )
+        expected_outcode = (
+            expected_postcode_match.group(0).upper().split()[0]
+            if expected_postcode_match else None
+        )
+
+        def _result_outcode(hit: dict) -> str | None:
+            pc = (hit.get("address", {}) or {}).get("postcode", "")
+            return pc.upper().split()[0] if pc else None
+
+        if results and expected_outcode and _result_outcode(results[0]) != expected_outcode:
+            # Nominatim matched the free-text query (often the street name)
+            # to a result in a completely different postcode area than the
+            # one specified - e.g. a same-named street in another city. This
+            # would silently value the wrong property with no indication
+            # anything went wrong, so we don't trust it: retry anchored
+            # strictly to the postcode instead, which we're far more
+            # confident is correct (usually picked from a dropdown).
+            logger.warning(
+                "geocoding_postcode_mismatch",
+                address=address,
+                expected_outcode=expected_outcode,
+                got_postcode=(results[0].get("address", {}) or {}).get("postcode"),
+            )
+            results = await self._query_nominatim(expected_postcode_match.group(0))
+
         if not results:
             # The full address (often including a flat/building name Nominatim
             # doesn't index) may not resolve. Fall back to just the postcode —
             # this still gives us a usable lat/lng and locality for the area,
             # and the original address string is preserved as line_1 below.
-            postcode_match = re.search(
-                r"[A-Za-z]{1,2}[0-9][0-9A-Za-z]?\s*[0-9][A-Za-z]{2}", address
-            )
-            if postcode_match:
+            if expected_postcode_match:
                 logger.info(
                     "geocoding_fallback_to_postcode",
                     address=address,
-                    postcode=postcode_match.group(0),
+                    postcode=expected_postcode_match.group(0),
                 )
-                results = await self._query_nominatim(postcode_match.group(0))
+                results = await self._query_nominatim(expected_postcode_match.group(0))
 
         if not results:
             raise AddressNotFoundError(address)
