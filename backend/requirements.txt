@@ -18,3 +18,6 @@ structlog==24.1.0
 # ── PDF generation ─────────────────────────────────────────────
 playwright==1.44.0          # Playwright Python SDK
 greenlet==3.0.3             # Required by Playwright's async runtime
+
+# ── Rate limiting ────────────────────────────────────────────────
+slowapi==0.1.9

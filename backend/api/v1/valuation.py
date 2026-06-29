@@ -2,12 +2,13 @@ import re
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
+from core.limiter import limiter
 from api.deps import get_valuation_service
 from db.session import get_db
 from models.orm import Property, User, ValuationReport
@@ -88,7 +89,9 @@ def _serialise_valuation(report, *, include_property: bool = False):
     status_code=200,
     summary="Run a full property valuation for a given address",
 )
+@limiter.limit("10/minute")
 async def run_valuation(
+    request: Request,
     body: ValuationRequest,
     svc: Annotated[ValuationService, Depends(get_valuation_service)],
     current_user: Annotated[User, Depends(get_current_user)],
@@ -196,7 +199,9 @@ async def get_valuation(
     summary="Download the branded PDF report",
     response_class=FileResponse,
 )
+@limiter.limit("10/minute")
 async def download_report(
+    request: Request,
     valuation_id: uuid.UUID,
     svc: Annotated[ValuationService, Depends(get_valuation_service)],
     force: bool = False,

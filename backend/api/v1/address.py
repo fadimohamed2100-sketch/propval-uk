@@ -1,6 +1,7 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from api.deps import get_valuation_service
+from core.limiter import limiter
 from schemas.schemas import AddressSearchRequest, AddressSearchResponse, AddressOut, PropertyOut
 from services.valuation_service import ValuationService
 from services.property_data import PropertyDataService
@@ -16,7 +17,9 @@ def get_property_data_service() -> PropertyDataService:
     "/units",
     summary="List all addressable units (flats/houses) at a postcode, with UPRN",
 )
+@limiter.limit("30/minute")
 async def list_units(
+    request: Request,
     postcode: str,
     pd: Annotated[PropertyDataService, Depends(get_property_data_service)],
 ) -> dict:
@@ -33,7 +36,9 @@ async def list_units(
     response_model=AddressSearchResponse,
     summary="Geocode an address and look up any existing property record",
 )
+@limiter.limit("30/minute")
 async def search_address(
+    request: Request,
     body: AddressSearchRequest,
     svc: Annotated[ValuationService, Depends(get_valuation_service)],
 ) -> AddressSearchResponse:
