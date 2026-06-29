@@ -91,6 +91,18 @@ class GeocoderService:
                 got_postcode=(results[0].get("address", {}) or {}).get("postcode"),
             )
             results = await self._query_nominatim(expected_postcode_match.group(0))
+            if results and _result_outcode(results[0]) != expected_outcode:
+                # Even an isolated, postcode-only query didn't resolve to the
+                # right area - a genuine Nominatim coverage gap for this
+                # postcode, not just a free-text mismatch. Don't silently
+                # proceed with a location we know is wrong.
+                logger.warning(
+                    "geocoding_postcode_unresolvable",
+                    address=address,
+                    expected_outcode=expected_outcode,
+                    got_postcode=(results[0].get("address", {}) or {}).get("postcode"),
+                )
+                raise AddressNotFoundError(address)
 
         if not results:
             # The full address (often including a flat/building name Nominatim
