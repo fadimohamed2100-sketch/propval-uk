@@ -175,6 +175,7 @@ class ValuationService:
                 parking=parking,
                 outdoor_space=outdoor_space,
                 tenure=tenure,
+                lease_years=lease_years,
             )
             if cached:
                 logger.info("valuation_cache_hit", property_id=str(property_.id))
@@ -326,6 +327,8 @@ class ValuationService:
             methodology["subject_outdoor_space"] = outdoor_space
         if tenure:
             methodology["subject_tenure"] = tenure
+        if lease_years:
+            methodology["subject_lease_years"] = lease_years
         if last_sold_price:
             methodology["previous_sale_price_pence"] = int(float(last_sold_price) * 100) if isinstance(last_sold_price, (int, float)) else last_sold_price
         if last_sold_date:
@@ -476,6 +479,7 @@ class ValuationService:
         parking: str | None = None,
         outdoor_space: str | None = None,
         tenure: str | None = None,
+        lease_years: int | None = None,
     ) -> ValuationReport | None:
         now = datetime.now(timezone.utc)
         filters = [
@@ -501,6 +505,8 @@ class ValuationService:
             filters.append(ValuationReport.methodology["subject_outdoor_space"].astext == outdoor_space)
         if tenure:
             filters.append(ValuationReport.methodology["subject_tenure"].astext == tenure)
+        if lease_years:
+            filters.append(ValuationReport.methodology["subject_lease_years"].astext == str(lease_years))
         stmt = (
             select(ValuationReport)
             .where(*filters)
