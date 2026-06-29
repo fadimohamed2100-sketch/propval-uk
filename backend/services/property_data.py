@@ -477,6 +477,7 @@ class PropertyDataService:
             return None
 
         items = (body.get("result") or {}).get("items") or body.get("items") or []
+        logger.info("land_registry_lookup", postcode=postcode, line_1=line_1, items_returned=len(items))
         if not items:
             return None
 
@@ -511,9 +512,11 @@ class PropertyDataService:
                 matches.append((str(date_val), int(price)))
 
         if not matches:
+            logger.info("land_registry_no_match", postcode=postcode, line_1=line_1)
             return None
         matches.sort(key=lambda m: m[0], reverse=True)
         latest_date, latest_price = matches[0]
+        logger.info("land_registry_match_found", postcode=postcode, date=latest_date, price=latest_price)
         return {"price_pence": latest_price * 100, "date": latest_date[:10]}
 
     async def close(self) -> None:
