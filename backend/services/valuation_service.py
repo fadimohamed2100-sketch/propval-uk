@@ -247,6 +247,14 @@ class ValuationService:
             if own_sale_idx is not None:
                 raw_sales = raw_sales[:own_sale_idx] + raw_sales[own_sale_idx + 1:]
 
+        # Direct Land Registry Price Paid Data lookup takes priority over the
+        # above if it finds a match - comprehensive since 1995, no recency
+        # cap, always has price+date together (England & Wales only).
+        lr_own_sale = await self._property_data.get_land_registry_own_sale(address.postcode, address.line_1)
+        if lr_own_sale:
+            own_sale_price_pence = lr_own_sale["price_pence"]
+            own_sale_date_iso = lr_own_sale["date"]
+
         comp_inputs = [
             ComparableInput(
                 address=s["address"],

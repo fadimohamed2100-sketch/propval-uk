@@ -9,6 +9,7 @@ Both are free to use with no API key for basic access (EPC requires
 a registered email; supply EPC_API_KEY in .env as "email:apikey").
 """
 import httpx
+import re
 from datetime import date, timedelta
 from core.config import get_settings
 from core.exceptions import ExternalAPIError
@@ -442,6 +443,78 @@ class PropertyDataService:
         if avg_dom_days is None and avg_sale_pct is None:
             return None
         return {"avg_time_on_market_days": avg_dom_days, "avg_sale_percent": avg_sale_pct}
+
+    async def get_land_registry_own_sale(self, postcode: str, line_1: str) -> dict | None:
+        """
+        Direct lookup of THIS property'''s own sale history from HM Land
+        Registry'''s official Price Paid Data - every residential sale in
+        England & Wales since 1995, free, no API key. Unlike PropertyData'''s
+        sold-prices wrapper (capped at ~4 years) or Homedata (can return a
+        date with a null price), this always has price+date together for
+        every real transaction, with no recency limit.
+
+        England & Wales only - Scotland and Northern Ireland have separate
+        registries not covered by this dataset.
+
+        Returns the most recent matching transaction as
+        {"price_pence": int, "date": "YYYY-MM-DD"}, or None if no match
+        or any error - best-effort, never blocks the valuation.
+        """
+        if not postcode or not line_1:
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    "https://landregistry.data.gov.uk/data/ppi/transaction-record.json",
+                    params={"propertyAddress.postcode": postcode, "_pageSize": 100},
+                    headers={"Accept": "application/json"},
+                )
+                if resp.status_code != 200:
+                    return None
+                body = resp.json()
+        except Exception as e:
+            logger.warning("land_registry_fetch_error", postcode=postcode, error=str(e))
+            return None
+
+        items = (body.get("result") or {}).get("items") or body.get("items") or []
+        if not items:
+            return None
+
+        num_match = re.search(r"\d+", line_1)
+        target_num = num_match.group() if num_match else None
+        if not target_num:
+            return None
+        target_words = set(re.findall(r"[a-zA-Z]+", line_1.lower())) - {"flat", "road", "street", "avenue", "lane", "close", "drive", "way", "court"}
+
+        matches = []
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            addr = it.get("propertyAddress")
+            if not isinstance(addr, dict):
+                addr = {
+                    "paon": it.get("propertyAddress.paon"),
+                    "saon": it.get("propertyAddress.saon"),
+                    "street": it.get("propertyAddress.street"),
+                }
+            addr_text = " ".join(str(v) for v in (addr.get("paon"), addr.get("saon"), addr.get("street")) if v).lower()
+            if not addr_text:
+                continue
+            if not re.search(r"" + re.escape(target_num) + r"", addr_text):
+                continue
+            addr_words = set(re.findall(r"[a-zA-Z]+", addr_text)) - {"flat", "road", "street", "avenue", "lane", "close", "drive", "way", "court"}
+            if target_words and not (target_words & addr_words):
+                continue
+            price = it.get("pricePaid")
+            date_val = it.get("transactionDate")
+            if price and date_val:
+                matches.append((str(date_val), int(price)))
+
+        if not matches:
+            return None
+        matches.sort(key=lambda m: m[0], reverse=True)
+        latest_date, latest_price = matches[0]
+        return {"price_pence": latest_price * 100, "date": latest_date[:10]}
 
     async def close(self) -> None:
         await self._lr_client.aclose()
