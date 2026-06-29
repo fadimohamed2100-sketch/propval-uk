@@ -420,6 +420,7 @@ class PropertyDataService:
             return None
 
         agents = payload if isinstance(payload, list) else (payload.get("results") or [])
+        logger.info("homedata_agent_stats_lookup", uprn=str(uprn), agents_returned=len(agents))
         if not agents:
             return None
 
@@ -441,7 +442,9 @@ class PropertyDataService:
         avg_sale_pct = round(sum(sale_pct_values) / len(sale_pct_values), 1) if sale_pct_values else None
 
         if avg_dom_days is None and avg_sale_pct is None:
+            logger.warning("homedata_agent_stats_no_usable_fields", uprn=str(uprn), sample=str(agents[0])[:500])
             return None
+        logger.info("homedata_agent_stats_match_found", uprn=str(uprn), avg_dom_days=avg_dom_days, avg_sale_pct=avg_sale_pct)
         return {"avg_time_on_market_days": avg_dom_days, "avg_sale_percent": avg_sale_pct}
 
     async def get_land_registry_own_sale(self, postcode: str, line_1: str) -> dict | None:
