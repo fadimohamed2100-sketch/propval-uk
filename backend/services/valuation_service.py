@@ -166,7 +166,16 @@ class ValuationService:
         # Return cached valuation unless force_refresh
         effective_bedrooms = bedrooms or property_.bedrooms
         if not force_refresh:
-            cached = await self._fresh_valuation(property_.id, bedrooms=effective_bedrooms, property_type=property_.property_type, tenure=tenure)
+            cached = await self._fresh_valuation(
+                property_.id,
+                bedrooms=effective_bedrooms,
+                property_type=property_.property_type,
+                bathrooms=bathrooms or property_.bathrooms,
+                condition=condition,
+                parking=parking,
+                outdoor_space=outdoor_space,
+                tenure=tenure,
+            )
             if cached:
                 logger.info("valuation_cache_hit", property_id=str(property_.id))
                 return cached
@@ -307,6 +316,16 @@ class ValuationService:
         # without the other (e.g. a real sold date with a missing price), and a
         # missing price shouldn't cause a perfectly real date to be discarded too.
         methodology = dict(result.methodology)
+        if bathrooms:
+            methodology["subject_bathrooms"] = bathrooms
+        if condition:
+            methodology["subject_condition"] = condition
+        if parking:
+            methodology["subject_parking"] = parking
+        if outdoor_space:
+            methodology["subject_outdoor_space"] = outdoor_space
+        if tenure:
+            methodology["subject_tenure"] = tenure
         if last_sold_price:
             methodology["previous_sale_price_pence"] = int(float(last_sold_price) * 100) if isinstance(last_sold_price, (int, float)) else last_sold_price
         if last_sold_date:
@@ -447,7 +466,17 @@ class ValuationService:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
-    async def _fresh_valuation(self, property_id: uuid.UUID, bedrooms: int | None = None, property_type: str | None = None, tenure: str | None = None) -> ValuationReport | None:
+    async def _fresh_valuation(
+        self,
+        property_id: uuid.UUID,
+        bedrooms: int | None = None,
+        property_type: str | None = None,
+        bathrooms: int | None = None,
+        condition: str | None = None,
+        parking: str | None = None,
+        outdoor_space: str | None = None,
+        tenure: str | None = None,
+    ) -> ValuationReport | None:
         now = datetime.now(timezone.utc)
         filters = [
             ValuationReport.property_id == property_id,
@@ -458,6 +487,20 @@ class ValuationService:
             filters.append(ValuationReport.methodology["subject_bedrooms"].astext == str(bedrooms))
         if property_type:
             filters.append(ValuationReport.methodology["subject_type"].astext == property_type)
+        # These don't feed our own scoring engine, but DO get sent to
+        # PropertyData's valuation API as adjustment hints - so a different
+        # value here can legitimately produce a different estimate, and a
+        # cached report from before the change must not be reused.
+        if bathrooms:
+            filters.append(ValuationReport.methodology["subject_bathrooms"].astext == str(bathrooms))
+        if condition:
+            filters.append(ValuationReport.methodology["subject_condition"].astext == condition)
+        if parking:
+            filters.append(ValuationReport.methodology["subject_parking"].astext == parking)
+        if outdoor_space:
+            filters.append(ValuationReport.methodology["subject_outdoor_space"].astext == outdoor_space)
+        if tenure:
+            filters.append(ValuationReport.methodology["subject_tenure"].astext == tenure)
         stmt = (
             select(ValuationReport)
             .where(*filters)
