@@ -19,7 +19,7 @@ export default function TermsPage() {
       <article className="max-w-3xl mx-auto px-6 pb-24 pt-4">
         <p className="font-mono text-xs uppercase tracking-widest text-gold-500 mb-3">Legal</p>
         <h1 className="font-display text-4xl md:text-5xl tracking-tight text-ink mb-2">Terms of Service</h1>
-        <p className="text-sm text-ink-faint mb-12">Last updated: [DATE]</p>
+        <p className="text-sm text-ink-faint mb-12">Last updated: 4 July 2026</p>
 
         <Section title="">
           <P>Please read these terms carefully before using PropVal. By creating an account or using the service, you agree to be bound by them.</P>
@@ -27,9 +27,9 @@ export default function TermsPage() {
 
         <Section title="1. Who we are">
           <P>
-            PropVal is operated by <Fill>[LEGAL ENTITY NAME]</Fill> (&ldquo;PropVal&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;,
+            PropVal is operated by <Fill>19 Sourcing Ltd</Fill> (&ldquo;PropVal&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;,
             &ldquo;our&rdquo;), a company registered in England and Wales under company number{" "}
-            <Fill>[COMPANY NUMBER]</Fill>, with its registered office at <Fill>[REGISTERED ADDRESS]</Fill>.
+            <Fill>17306899</Fill>, with its registered office at <Fill>124 City Road, London, England, EC1V 2NX</Fill>.
           </P>
         </Section>
 
@@ -138,9 +138,9 @@ export default function TermsPage() {
         <Section title="12. Contact us">
           <P>If you have any questions about these terms, contact us at:</P>
           <p className="text-ink font-medium">
-            <Fill>[CONTACT EMAIL]</Fill><br />
-            <Fill>[LEGAL ENTITY NAME]</Fill><br />
-            <Fill>[REGISTERED ADDRESS]</Fill>
+            <Fill>hello@propval.co.uk</Fill><br />
+            <Fill>19 Sourcing Ltd</Fill><br />
+            <Fill>124 City Road, London, England, EC1V 2NX</Fill>
           </p>
         </Section>
       </article>

@@ -19,7 +19,7 @@ export default function PrivacyPage() {
       <article className="max-w-3xl mx-auto px-6 pb-24 pt-4">
         <p className="font-mono text-xs uppercase tracking-widest text-gold-500 mb-3">Legal</p>
         <h1 className="font-display text-4xl md:text-5xl tracking-tight text-ink mb-2">Privacy Policy</h1>
-        <p className="text-sm text-ink-faint mb-12">Last updated: [DATE]</p>
+        <p className="text-sm text-ink-faint mb-12">Last updated: 4 July 2026</p>
 
         <Section title="">
           <P>
@@ -31,9 +31,9 @@ export default function PrivacyPage() {
 
         <Section title="1. Who we are">
           <P>
-            PropVal is operated by <Fill>[LEGAL ENTITY NAME]</Fill>, a company registered in England
-            and Wales under company number <Fill>[COMPANY NUMBER]</Fill>, with its registered office
-            at <Fill>[REGISTERED ADDRESS]</Fill>.
+            PropVal is operated by <Fill>19 Sourcing Ltd</Fill>, a company registered in England
+            and Wales under company number <Fill>17306899</Fill>, with its registered office
+            at <Fill>124 City Road, London, England, EC1V 2NX</Fill>.
           </P>
           <P>
             For the purposes of UK data protection law, we are the &ldquo;data controller&rdquo; of the
@@ -170,9 +170,9 @@ export default function PrivacyPage() {
         <Section title="12. Contact us">
           <P>If you have any questions about this policy or how we handle your personal information, contact us at:</P>
           <p className="text-ink font-medium">
-            <Fill>[CONTACT EMAIL]</Fill><br />
-            <Fill>[LEGAL ENTITY NAME]</Fill><br />
-            <Fill>[REGISTERED ADDRESS]</Fill>
+            <Fill>hello@propval.co.uk</Fill><br />
+            <Fill>19 Sourcing Ltd</Fill><br />
+            <Fill>124 City Road, London, England, EC1V 2NX</Fill>
           </p>
         </Section>
       </article>

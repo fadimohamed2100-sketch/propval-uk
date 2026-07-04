@@ -16,8 +16,8 @@ const EXAMPLE_ADDRESSES = [
 ];
 
 const STATS = [
-  { label: "Properties valued", value: "280k+", icon: Building2 },
-  { label: "Data accuracy", value: "94%", icon: TrendingUp },
+  { label: "Data sources", value: "3+", icon: Building2 },
+  { label: "Avg. time to value", value: "<5s", icon: TrendingUp },
   { label: "Comparable sources", value: "3", icon: Sparkles },
 ];
 

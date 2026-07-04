@@ -26,11 +26,19 @@ class PropertyDataService:
             base_url=settings.LAND_REGISTRY_BASE_URL,
             timeout=15.0,
         )
+        epc_auth = (
+            f"Bearer {settings.EPC_BEARER_TOKEN}"
+            if settings.EPC_BEARER_TOKEN
+            else "Basic " + __import__("base64").b64encode(
+                f"{settings.EPC_API_EMAIL}:{settings.EPC_API_KEY}".encode()
+            ).decode()
+        )
         self._epc_client = httpx.AsyncClient(
             base_url=settings.EPC_API_BASE_URL,
             http2=False,
+            follow_redirects=True,
             headers={
-                "Authorization": "Basic " + __import__("base64").b64encode(f"{settings.EPC_API_EMAIL}:{settings.EPC_API_KEY}".encode()).decode(),
+                "Authorization": epc_auth,
                 "Accept": "application/json",
             },
             timeout=15.0,
@@ -87,16 +95,17 @@ class PropertyDataService:
     # EPC — energy certificate for an address
     # ------------------------------------------------------------------
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(min=1, max=4), reraise=True)
-    async def get_epc_data(self, postcode: str, line_1: str | None = None) -> dict | None:
+    async def get_epc_data(self, postcode: str, line_1: str | None = None, uprn: str | None = None) -> dict | None:
         """
-        Returns the EPC record for a postcode, matched against line_1 (street/building
-        number) where possible, falling back to most recent if no match found.
-            {floor_area_m2, epc_rating, property_type, inspection_date}
+        Returns the EPC record for a property.
+        New API supports direct UPRN lookup (more precise) - uses that when
+        available, falls back to postcode+address matching otherwise.
         """
         try:
+            params = {"uprn": uprn.zfill(12)} if uprn else {"postcode": postcode, "size": 50}
             resp = await self._epc_client.get(
                 "/domestic/search",
-                params={"postcode": postcode, "size": 50},
+                params=params,
             )
             if resp.status_code == 404:
                 return None
