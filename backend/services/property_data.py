@@ -433,21 +433,17 @@ class PropertyDataService:
         if not agents:
             return None
 
-        weighted_dom_sum = 0.0
-        weight_sum = 0.0
         sale_pct_values: list[float] = []
+        dom_values: list[float] = []
         for agent in agents:
-            stats = agent.get("stats", agent) or {}
-            weight = stats.get("listing_count") or stats.get("sales_count") or 1
-            dom = stats.get("avg_time_on_market")
-            if dom is not None:
-                weighted_dom_sum += dom * weight
-                weight_sum += weight
-            pct = stats.get("avg_sale_percent")
+            pct = agent.get("avg_sale_percent")
             if pct is not None:
-                sale_pct_values.append(pct)
+                sale_pct_values.append(float(pct))
+            dom = agent.get("avg_time_to_sstc")
+            if dom is not None:
+                dom_values.append(float(dom))
 
-        avg_dom_days = round(weighted_dom_sum / weight_sum) if weight_sum else None
+        avg_dom_days = round(sum(dom_values) / len(dom_values)) if dom_values else None
         avg_sale_pct = round(sum(sale_pct_values) / len(sale_pct_values), 1) if sale_pct_values else None
 
         if avg_dom_days is None and avg_sale_pct is None:
