@@ -425,7 +425,7 @@ class PropertyDataService:
                     return None
                 payload = resp.json()
         except Exception as e:
-            logger.warning("homedata_agent_stats_error", error=str(e))
+            logger.warning("homedata_agent_stats_error", error=str(e), error_type=type(e).__name__)
             return None
 
         agents = payload if isinstance(payload, list) else (payload.get("results") or [])
@@ -474,7 +474,7 @@ class PropertyDataService:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(
                     "https://landregistry.data.gov.uk/data/ppi/transaction-record.json",
-                    params={"propertyAddress.postcode": postcode, "_pageSize": 100, "_view": "basic"},
+                    params={"propertyAddress.postcode": postcode, "_pageSize": 100, "_view": "all"},
                     headers={"Accept": "application/json"},
                 )
                 if resp.status_code != 200:
