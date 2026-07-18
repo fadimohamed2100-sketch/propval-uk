@@ -474,7 +474,11 @@ class PropertyDataService:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(
                     "https://landregistry.data.gov.uk/data/ppi/transaction-record.json",
-                    params={"propertyAddress.postcode": postcode, "_pageSize": 100, "_view": "all"},
+                    params={
+                        "propertyAddress.postcode": postcode,
+                        "_pageSize": 100,
+                        "_properties": "pricePaid,transactionDate,propertyAddress.paon,propertyAddress.saon,propertyAddress.street,propertyAddress.postcode,propertyAddress.town",
+                    },
                     headers={"Accept": "application/json"},
                 )
                 if resp.status_code != 200:
@@ -503,6 +507,8 @@ class PropertyDataService:
                 continue
             addr = it.get("propertyAddress")
             if not isinstance(addr, dict):
+                # Flat dotted-key shape from _properties expansion (the
+                # normal case now) - fields sit at the top level of the item.
                 addr = {
                     "paon": it.get("propertyAddress.paon"),
                     "saon": it.get("propertyAddress.saon"),
