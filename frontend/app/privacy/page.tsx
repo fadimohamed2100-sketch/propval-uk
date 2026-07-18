@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Privacy Policy — PropVal",
+  title: "Privacy Policy — PropValue",
 };
 
 export default function PrivacyPage() {
@@ -9,7 +9,7 @@ export default function PrivacyPage() {
     <main className="min-h-screen bg-stone-50">
       <nav className="flex items-center justify-between px-6 py-5 max-w-3xl mx-auto w-full">
         <Link href="/" className="font-display text-xl font-semibold tracking-tight text-ink">
-          Prop<span className="text-gold-400">Val</span>
+          Prop<span className="text-gold-400">Value</span>
         </Link>
         <Link href="/" className="text-sm text-ink-muted hover:text-ink transition-colors">
           Back home
@@ -23,7 +23,7 @@ export default function PrivacyPage() {
 
         <Section title="">
           <P>
-            This policy explains what personal information PropVal collects, why we collect it,
+            This policy explains what personal information PropValue collects, why we collect it,
             and what you can do about it. We&apos;ve written it in plain English rather than legal
             jargon — if anything is unclear, contact us using the details at the bottom of this page.
           </P>
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
 
         <Section title="1. Who we are">
           <P>
-            PropVal is operated by <Fill>19 Sourcing Ltd</Fill>, a company registered in England
+            PropValue is operated by <Fill>19 Sourcing Ltd</Fill>, a company registered in England
             and Wales under company number <Fill>17306899</Fill>, with its registered office
             at <Fill>124 City Road, London, England, EC1V 2NX</Fill>.
           </P>
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
             <LI><B>Technical data:</B> your IP address, browser type, device information, and session activity, collected automatically by our authentication provider (Clerk) and hosting infrastructure for security and to keep you signed in.</LI>
             <LI><B>Cookies:</B> we use cookies set by our authentication provider to keep you logged in between visits. We do not currently use cookies for advertising or analytics tracking. See Section 6 for more detail.</LI>
           </UL>
-          <P>We do <B>not</B> ask for or store payment card details, since PropVal does not currently process payments.</P>
+          <P>We do <B>not</B> ask for or store payment card details, since PropValue does not currently process payments.</P>
         </Section>
 
         <Section title="3. How we use your information, and our legal basis for doing so">
@@ -123,7 +123,7 @@ export default function PrivacyPage() {
 
         <Section title="8. Children">
           <P>
-            PropVal is not intended for use by anyone under the age of 18, and we do not knowingly
+            PropValue is not intended for use by anyone under the age of 18, and we do not knowingly
             collect personal information from children. If you believe a child has provided us with
             personal information, please contact us and we will delete it.
           </P>
@@ -170,7 +170,7 @@ export default function PrivacyPage() {
         <Section title="12. Contact us">
           <P>If you have any questions about this policy or how we handle your personal information, contact us at:</P>
           <p className="text-ink font-medium">
-            <Fill>hello@propval.co.uk</Fill><br />
+            <Fill>hello@propvalue.co.uk</Fill><br />
             <Fill>19 Sourcing Ltd</Fill><br />
             <Fill>124 City Road, London, England, EC1V 2NX</Fill>
           </p>
@@ -179,7 +179,7 @@ export default function PrivacyPage() {
 
       <footer className="border-t border-stone-100 py-8 px-6">
         <div className="max-w-3xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-ink-faint">
-          <span>© 2026 PropVal. Not a RICS-compliant valuation.</span>
+          <span>© 2026 PropValue. Not a RICS-compliant valuation.</span>
           <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-ink transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-ink transition-colors">Terms</Link>

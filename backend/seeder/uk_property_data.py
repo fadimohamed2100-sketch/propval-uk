@@ -1,7 +1,7 @@
 """
 uk_property_data.py
 ~~~~~~~~~~~~~~~~~~~
-Realistic UK property mock data for seeding the PropVal database.
+Realistic UK property mock data for seeding the PropValue database.
 
 Covers 6 cities across England with accurate postcodes, price bands,
 property types, floor areas, and market conditions — all calibrated

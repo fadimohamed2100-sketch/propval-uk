@@ -24,11 +24,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PropVal — Instant Property Valuations",
+  title: "PropValue — Instant Property Valuations",
   description:
     "Instantly value any UK property using comparable sales, Land Registry data, and our automated valuation model.",
   openGraph: {
-    title: "PropVal — Instant Property Valuations",
+    title: "PropValue — Instant Property Valuations",
     description: "Intelligent automated valuations for UK residential property.",
     type: "website",
   },

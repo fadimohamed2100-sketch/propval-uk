@@ -72,7 +72,7 @@ export default function ResultsPage() {
       `}</style>
 
       <div style={{ background: "white", borderBottom: "1px solid #ebebeb", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <a href="/" style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.03em" }}>PropVal</a>
+        <a href="/" style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.03em" }}>PropValue</a>
         <span style={{ fontSize: 13, color: "#999", fontFamily: "sans-serif" }}>Property Valuation Report</span>
       </div>
 
@@ -164,7 +164,7 @@ export default function ResultsPage() {
         )}
 
         <p style={{ textAlign: "center", fontSize: 12, color: "#bbb", fontFamily: "sans-serif", marginTop: 32 }}>
-          Report generated {new Date(data.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · Powered by PropVal
+          Report generated {new Date(data.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · Powered by PropValue
         </p>
       </div>
     </main>

@@ -1,7 +1,7 @@
 """
 seed.py
 ~~~~~~~
-Seeds the PropVal PostgreSQL database with realistic UK property data.
+Seeds the PropValue PostgreSQL database with realistic UK property data.
 
 Usage:
     # From the backend/ root directory:
@@ -401,7 +401,7 @@ async def main(reset: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Seed the PropVal database")
+    parser = argparse.ArgumentParser(description="Seed the PropValue database")
     parser.add_argument("--reset", action="store_true",
                         help="Wipe all existing data before seeding")
     args = parser.parse_args()

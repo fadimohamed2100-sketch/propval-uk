@@ -114,7 +114,7 @@ export default function HomePage() {
     <main className="min-h-screen flex flex-col">
       <nav className="flex items-center justify-between px-6 py-5 max-w-6xl mx-auto w-full">
         <span className="font-display text-xl font-semibold tracking-tight">
-          Prop<span className="text-gold-400">Val</span>
+          Prop<span className="text-gold-400">Value</span>
         </span>
         <div className="flex items-center gap-6 text-sm text-ink-muted">
           <a href="#how" className="hover:text-ink transition-colors">How it works</a>
@@ -358,7 +358,7 @@ export default function HomePage() {
 
       <footer className="border-t border-stone-100 py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-ink-faint">
-          <span>© 2026 PropVal. Not a RICS-compliant valuation.</span>
+          <span>© 2026 PropValue. Not a RICS-compliant valuation.</span>
           <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-ink transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-ink transition-colors">Terms</Link>
