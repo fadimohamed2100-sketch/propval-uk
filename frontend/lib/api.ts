@@ -83,4 +83,56 @@ export function reportPdfUrl(id: string): string {
   return `${BASE}/valuation/${id}/report`;
 }
 
+export interface CreditsInfo {
+  credits_remaining: number;
+  subscription_tier: string | null;
+  credits_reset_at: string | null;
+  costs: { valuation: number; pdf_additional: number; pdf_total_with_valuation: number };
+}
+
+export async function getCredits(token: string | null): Promise<CreditsInfo> {
+  return request<CreditsInfo>("/credits", undefined, token);
+}
+
+/**
+ * Downloads the PDF via an authenticated fetch (the endpoint charges
+ * credits, so it requires the Clerk session token - a bare <a href>
+ * can't carry it). Streams the response to a Blob and triggers the
+ * browser download. Throws ApiClientError (status 402 = out of credits).
+ */
+export async function downloadReportPdf(
+  id: string,
+  token: string | null,
+  force = false,
+): Promise<void> {
+  const res = await fetch(`${BASE}/valuation/${id}/report${force ? "?force=true" : ""}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    let errBody: ApiError = { detail: "An unexpected error occurred." };
+    try { errBody = await res.json(); } catch { /* ignore */ }
+    throw new ApiClientError(res.status, errBody);
+  }
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : `valuation_${id}.pdf`;
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** Fire after any credit-spending action so badges refetch the balance. */
+export function notifyCreditsChanged(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("credits:refresh"));
+  }
+}
+
 export { ApiClientError };

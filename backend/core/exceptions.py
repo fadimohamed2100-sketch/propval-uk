@@ -47,3 +47,15 @@ class ExternalAPIError(HTTPException):
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Upstream error from {service}. {detail}".strip(),
         )
+
+
+class InsufficientCreditsError(HTTPException):
+    def __init__(self, needed: int, balance: int):
+        super().__init__(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=(
+                f"Insufficient credits: this action needs {needed} credit(s) "
+                f"but your balance is {balance}. Please upgrade your plan or "
+                f"contact support."
+            ),
+        )

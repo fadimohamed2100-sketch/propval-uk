@@ -7,8 +7,14 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from datetime import datetime, timezone
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from api.auth import get_current_user
 from core.limiter import limiter
+from db.session import get_db
+from services.credit_service import CreditService
 from api.deps import get_valuation_service
 from db.session import get_db
 from models.orm import Property, User, ValuationReport
@@ -95,6 +101,7 @@ async def run_valuation(
     body: ValuationRequest,
     svc: Annotated[ValuationService, Depends(get_valuation_service)],
     current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ValuationDetailOut:
     """
     Full pipeline:
@@ -107,6 +114,15 @@ async def run_valuation(
     Requires a signed-in user (Clerk session token in the Authorization header).
     Set `force_refresh: true` to bypass the 30-day cache.
     """
+    # Pre-charge 1 credit atomically (fails fast with 402 before any paid
+    # external API call is made). If the valuation raises, the whole request
+    # transaction rolls back - charge included. If it returns a CACHED
+    # report (created before this request started), the credit is refunded:
+    # agents are never charged twice for the same computation.
+    request_start = datetime.now(timezone.utc)
+    credit_svc = CreditService(db)
+    await credit_svc.spend(current_user, 1, "valuation")
+
     report = await svc.run_valuation(
         raw_address=body.address,
         user_id=current_user.id,
@@ -122,6 +138,10 @@ async def run_valuation(
         unit_identifier=body.unit_identifier,
         uprn=body.uprn,
     )
+    if report.created_at < request_start:
+        await credit_svc.refund(
+            current_user, 1, "valuation_cache_refund", report_id=report.id
+        )
     return _serialise_valuation(report, include_property=True)
 
 
@@ -204,6 +224,8 @@ async def download_report(
     request: Request,
     valuation_id: uuid.UUID,
     svc: Annotated[ValuationService, Depends(get_valuation_service)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
     force: bool = False,
 ) -> FileResponse:
     """
@@ -215,6 +237,15 @@ async def download_report(
     current data (e.g. after correcting a data issue retroactively).
     """
     report = await svc.get_valuation(valuation_id)
+
+    # PDF costs 2 additional credits (3 total with the 1-credit valuation),
+    # charged ONCE per report: re-downloads and regenerations of an
+    # already-paid report are free. If generation fails after charging,
+    # the request transaction rolls back and the charge is undone.
+    credit_svc = CreditService(db)
+    if not await credit_svc.has_paid_for_pdf(valuation_id):
+        await credit_svc.spend(current_user, 2, "pdf_download", report_id=valuation_id)
+
     pdf_path = await svc.get_or_generate_report_pdf(valuation_id, force=force)
 
     addr = report.property.address if report.property else None

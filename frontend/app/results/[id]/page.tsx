@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
+import { ApiClientError, downloadReportPdf, notifyCreditsChanged } from "@/lib/api";
+import CreditsBadge from "@/components/CreditsBadge";
 
 function fmt(n: number) {
   return "£" + Math.round(n).toLocaleString("en-GB");
@@ -19,8 +22,33 @@ function ConfidenceBadge({ score }: { score: number }) {
 
 export default function ResultsPage() {
   const params = useParams();
+  const { getToken } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  async function handleDownloadPdf() {
+    if (!params?.id || downloading) return;
+    setDownloading(true);
+    setPdfError(null);
+    try {
+      const token = await getToken();
+      await downloadReportPdf(String(params.id), token);
+      notifyCreditsChanged();
+    } catch (err) {
+      notifyCreditsChanged();
+      if (err instanceof ApiClientError && err.status === 402) {
+        setPdfError("Not enough credits - a PDF report uses 3 credits in total (1 for the valuation + 2 for the report). Please contact us to top up.");
+      } else if (err instanceof ApiClientError) {
+        setPdfError(err.detail);
+      } else {
+        setPdfError("Download failed. Please try again.");
+      }
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   useEffect(() => {
     if (params?.id) {
@@ -73,7 +101,10 @@ export default function ResultsPage() {
 
       <div style={{ background: "white", borderBottom: "1px solid #ebebeb", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <a href="/" style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.03em" }}>PropValue</a>
-        <span style={{ fontSize: 13, color: "#999", fontFamily: "sans-serif" }}>Property Valuation Report</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
+          <CreditsBadge />
+          <span style={{ fontSize: 13, color: "#999", fontFamily: "sans-serif" }}>Property Valuation Report</span>
+        </span>
       </div>
 
       <div style={{ maxWidth: 880, margin: "0 auto", padding: "32px 20px" }}>
@@ -84,21 +115,28 @@ export default function ResultsPage() {
             <ConfidenceBadge score={data.confidence_score} />
           </div>
           <div style={{ textAlign: "right" }}>
-            <a
-              href={"/api/backend/valuation/" + params?.id + "/report"}
-              download
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloading}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 background: "#1a1a1a", color: "white", fontFamily: "sans-serif",
                 fontSize: 14, fontWeight: 600, padding: "12px 20px",
-                borderRadius: 10, textDecoration: "none",
+                borderRadius: 10, border: "none",
+                cursor: downloading ? "wait" : "pointer",
+                opacity: downloading ? 0.6 : 1,
               }}
             >
-              Download PDF Report
-            </a>
+              {downloading ? "Generating..." : "Download PDF Report"}
+            </button>
             <p style={{ fontSize: 12, color: "#aaa", fontFamily: "sans-serif", marginTop: 6 }}>
-              Takes a few seconds to generate
+              Uses 3 credits in total (re-downloads are free)
             </p>
+            {pdfError && (
+              <p style={{ fontSize: 12, color: "#dc2626", fontFamily: "sans-serif", marginTop: 6, maxWidth: 260 }}>
+                {pdfError}
+              </p>
+            )}
           </div>
         </div>
 

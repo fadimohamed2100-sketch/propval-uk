@@ -43,6 +43,10 @@ class User(Base):
         DateTime(timezone=True), nullable=False, default=_now, onupdate=_now
     )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # ── Credits (B2B subscription metering) ──────────────────────
+    credits_remaining: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    subscription_tier: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    credits_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     valuation_reports: Mapped[list["ValuationReport"]] = relationship(
         back_populates="user", lazy="noload"
@@ -302,3 +306,29 @@ class Comparable(Base):
     )
 
     valuation: Mapped["ValuationReport"] = relationship(back_populates="comparables")
+
+
+class CreditTransaction(Base):
+    """
+    Immutable ledger of every credit change. amount is signed
+    (negative = spend, positive = grant/refund); balance_after records
+    the user's balance immediately after this transaction, so the full
+    history is auditable without replaying events.
+    """
+    __tablename__ = "credit_transactions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    balance_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    reason: Mapped[str] = mapped_column(String(40), nullable=False)
+    report_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("valuation_reports.id"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_now
+    )

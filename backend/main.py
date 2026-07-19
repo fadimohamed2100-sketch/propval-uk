@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from api.v1 import address, property, valuation
+from api.v1 import address, credits, property, valuation
 from core.config import get_settings
 from core.limiter import limiter
 from core.logging import setup_logging
@@ -26,6 +26,19 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+            # create_all only creates missing TABLES, not missing columns on
+            # existing tables - so credit columns on users need explicit,
+            # idempotent ALTERs (safe to run on every startup).
+            from sqlalchemy import text as _text
+            await conn.execute(_text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS credits_remaining INTEGER NOT NULL DEFAULT 10"
+            ))
+            await conn.execute(_text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(30)"
+            ))
+            await conn.execute(_text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS credits_reset_at TIMESTAMPTZ"
+            ))
     except Exception as e:
         logger.warning("db_init_warning", error=str(e))
     yield
@@ -54,6 +67,7 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 app.include_router(address.router, prefix=settings.API_PREFIX)
 app.include_router(property.router, prefix=settings.API_PREFIX)
 app.include_router(valuation.router, prefix=settings.API_PREFIX)
+app.include_router(credits.router, prefix=settings.API_PREFIX)
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health():

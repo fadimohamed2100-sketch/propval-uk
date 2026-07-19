@@ -4,7 +4,8 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, MapPin, TrendingUp, Building2, Sparkles } from "lucide-react";
-import { runValuation } from "@/lib/api";
+import { runValuation, notifyCreditsChanged } from "@/lib/api";
+import CreditsBadge from "@/components/CreditsBadge";
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth, useClerk } from "@clerk/nextjs";
 import { ApiClientError } from "@/lib/api";
 
@@ -99,9 +100,13 @@ export default function HomePage() {
       if (driveway) payload.parking = "single";
       if (outdoorSpace) payload.outdoor_space = outdoorSpace;
       const result = await runValuation(payload, token);
+      notifyCreditsChanged();
       router.push(`/results/${result.id}`);
     } catch (err) {
-      if (err instanceof ApiClientError) setError(err.detail);
+      if (err instanceof ApiClientError && err.status === 402) {
+        notifyCreditsChanged();
+        setError("You're out of credits. Each valuation uses 1 credit (PDF reports use 3 total). Please contact us to top up or upgrade your plan.");
+      } else if (err instanceof ApiClientError) setError(err.detail);
       else setError("Something went wrong. Please try again.");
       setLoading(false);
     }
@@ -119,6 +124,7 @@ export default function HomePage() {
         <div className="flex items-center gap-6 text-sm text-ink-muted">
           <a href="#how" className="hover:text-ink transition-colors">How it works</a>
           <SignedIn>
+            <CreditsBadge />
             <a href="/history" className="hover:text-ink transition-colors">History</a>
           </SignedIn>
           <SignedOut>
