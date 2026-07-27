@@ -39,6 +39,9 @@ async def lifespan(app: FastAPI):
             await conn.execute(_text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS credits_reset_at TIMESTAMPTZ"
             ))
+            await conn.execute(_text(
+                "ALTER TABLE comparables ADD COLUMN IF NOT EXISTS epc_floor_area_m2 NUMERIC(8,2)"
+            ))
     except Exception as e:
         logger.warning("db_init_warning", error=str(e))
     yield

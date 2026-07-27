@@ -588,10 +588,21 @@ class PropertyDataService:
         sale_pct_values: list[float] = []
         dom_values: list[float] = []
         for agent in agents:
-            pct = agent.get("avg_sale_percent")
+            # Confirmed live response shape:
+            #   {"agent_name": "...", "stats": {"avg_sale_percent": 98.78,
+            #    "avg_time_to_sstc": 62, "avg_time_on_market": 194, ...}}
+            # The metrics are nested under "stats" - reading them from the
+            # top level silently yielded nothing, which is why the report
+            # always fell back to the hardcoded 96%.
+            stats = agent.get("stats") or {}
+            pct = stats.get("avg_sale_percent")
             if pct is not None:
                 sale_pct_values.append(float(pct))
-            dom = agent.get("avg_time_to_sstc")
+            # Prefer time-to-SSTC (agreed sale) over raw time-on-market:
+            # it is the more meaningful "how fast do things sell" signal.
+            dom = stats.get("avg_time_to_sstc")
+            if dom is None:
+                dom = stats.get("avg_time_on_market")
             if dom is not None:
                 dom_values.append(float(dom))
 

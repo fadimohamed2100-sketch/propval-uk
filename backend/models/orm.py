@@ -293,6 +293,11 @@ class Comparable(Base):
     property_type: Mapped[str | None] = mapped_column(String(50))
     bedrooms: Mapped[int | None] = mapped_column(SmallInteger)
     floor_area_m2: Mapped[float | None] = mapped_column(Numeric(8, 2))
+    # Real per-comparable floor area from its own EPC certificate.
+    # DISPLAY ONLY - deliberately separate from floor_area_m2 (which the
+    # valuation engine consumes) so populating this cannot shift any
+    # valuation output.
+    epc_floor_area_m2: Mapped[float | None] = mapped_column(Numeric(8, 2), nullable=True)
     sale_price: Mapped[int] = mapped_column(BigInteger, nullable=False)
     sale_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     price_per_m2: Mapped[int | None] = mapped_column(BigInteger)
