@@ -347,6 +347,11 @@ class ValuationService:
             methodology["previous_sale_date"] = str(own_sale_date_iso)
         if unit_identifier:
             methodology["unit_identifier"] = unit_identifier
+        # Mirror the EPC rating into methodology: the detail API returns
+        # property as null, so the results page reads subject_* fields from
+        # here (as it already does for type, bedrooms and floor area).
+        if property_.epc_rating:
+            methodology["subject_epc_rating"] = property_.epc_rating
 
         # Construction age band & habitable room count, for "year built" and
         # "receptions" in the report. EPC register data already has these

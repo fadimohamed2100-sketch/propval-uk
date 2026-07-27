@@ -590,7 +590,10 @@ def build_context(
         # ── Market ────────────────────────────────────────────
         "market": {
             "area":             mkt.get("area", address.city or "Local area"),
-            "asking_price_pct": mkt.get("asking_price_pct", methodology.get("avg_sale_percent") or 96),
+            # None (not a hardcoded 96) when no real agent data was captured
+            # - the template hides the stat entirely rather than showing a
+            # number we invented, which would be indefensible to an agent.
+            "asking_price_pct": mkt.get("asking_price_pct", methodology.get("avg_sale_percent")),
             "weeks_on_market":  mkt.get("weeks_on_market", _weeks_from_days(methodology.get("avg_time_on_market_days"))),
             "demand_rating":    mkt.get("demand_rating", methodology.get("market_demand_rating") or "—"),
             "search_area":      mkt.get("search_area", address.postcode.split()[0]),

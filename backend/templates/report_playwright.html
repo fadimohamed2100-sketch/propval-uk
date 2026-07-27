@@ -495,13 +495,17 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
       {# LEFT: asking price % + chart #}
       <div class="insights-left">
         <p class="area-label">{{ market.area }}</p>
+        {% if market.asking_price_pct %}
         <div class="pct-box">
           <span class="pct-box-value">{{ market.asking_price_pct }}%</span>
         </div>
+        {% endif %}
+        {% if market.asking_price_pct %}
         <p class="insight-desc">
           Properties near you are achieving an average of
           <strong>{{ market.asking_price_pct }}%</strong> of the asking price
         </p>
+        {% endif %}
         <hr class="insight-divider">
 
         {# SVG line chart #}

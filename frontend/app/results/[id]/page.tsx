@@ -165,7 +165,7 @@ export default function ResultsPage() {
             <div><p className="label">Property Type</p><p className="value" style={{ textTransform: "capitalize" }}>{method.subject_type || prop?.property_type || "—"}</p></div>
             <div><p className="label">Bedrooms</p><p className="value">{method.subject_bedrooms ?? prop?.bedrooms ?? "—"}</p></div>
             <div><p className="label">Floor Area</p><p className="value">{method.subject_floor_area_m2 ? `${method.subject_floor_area_m2} m²` : "—"}</p></div>
-            <div><p className="label">EPC Rating</p><p className="value">{prop?.epc_rating || "—"}</p></div>
+            <div><p className="label">EPC Rating</p><p className="value">{method.subject_epc_rating || prop?.epc_rating || "—"}</p></div>
             <div><p className="label">Comparables Used</p><p className="value">{method.comps_used} of {method.comps_considered}</p></div>
             <div><p className="label">Data Sources</p><p className="value" style={{ textTransform: "capitalize" }}>{(data.source_apis || []).join(", ") || "—"}</p></div>
           </div>
