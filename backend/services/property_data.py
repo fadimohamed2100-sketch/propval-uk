@@ -8,6 +8,7 @@ Fetches:
 Both are free to use with no API key for basic access (EPC requires
 a registered email; supply EPC_API_KEY in .env as "email:apikey").
 """
+import asyncio
 import httpx
 import re
 from datetime import date, timedelta
@@ -94,64 +95,215 @@ class PropertyDataService:
     # ------------------------------------------------------------------
     # EPC — energy certificate for an address
     # ------------------------------------------------------------------
-    @retry(stop=stop_after_attempt(2), wait=wait_exponential(min=1, max=4), reraise=True)
-    async def get_epc_data(self, postcode: str, line_1: str | None = None, uprn: str | None = None) -> dict | None:
+    @staticmethod
+    def _epc_addr_text(row: dict) -> str:
+        """Join an EPC search row's address lines into one lowercase string."""
+        parts = [
+            row.get("addressLine1"), row.get("addressLine2"),
+            row.get("addressLine3"), row.get("addressLine4"),
+        ]
+        return " ".join(str(p) for p in parts if p).lower()
+
+    @staticmethod
+    def _addr_match_score(target_line_1: str, candidate_addr: str) -> int:
         """
-        Returns the EPC record for a property.
-        New API supports direct UPRN lookup (more precise) - uses that when
-        available, falls back to postcode+address matching otherwise.
+        Score how well an EPC address matches a target address.
+        Returns -1 for no match (house number absent), else the count of
+        overlapping street words. Same technique used for Land Registry.
+        """
+        num_match = re.search(r"\d+", target_line_1 or "")
+        if not num_match:
+            return -1
+        target_num = num_match.group()
+        if not re.search(r"\b" + re.escape(target_num) + r"\b", candidate_addr):
+            return -1
+        generic = {"flat", "road", "street", "avenue", "lane", "close", "drive", "way", "court", "house"}
+        target_words = set(re.findall(r"[a-zA-Z]+", target_line_1.lower())) - generic
+        cand_words = set(re.findall(r"[a-zA-Z]+", candidate_addr)) - generic
+        return len(target_words & cand_words)
+
+    @staticmethod
+    def _extract_floor_area(cert: dict) -> float | None:
+        """
+        Pull total floor area from a certificate payload. The exact key
+        varies by certificate schema version, so try the known variants
+        rather than assuming one.
+        """
+        for key in ("total_floor_area", "total-floor-area", "totalFloorArea"):
+            val = cert.get(key)
+            if val:
+                try:
+                    area = float(val)
+                    if area > 0:
+                        return area
+                except (TypeError, ValueError):
+                    continue
+        return None
+
+    async def _epc_search(self, postcode: str | None = None, uprn: str | None = None) -> list[dict]:
+        """
+        Search the EPC register. Returns summary rows (certificateNumber,
+        addressLine1-4, postcode, uprn) - note these do NOT include floor
+        area; that requires a follow-up certificate fetch.
         """
         try:
-            params = {"uprn": uprn.zfill(12)} if uprn else {"postcode": postcode, "size": 50}
-            resp = await self._epc_client.get(
-                "/domestic/search",
-                params=params,
-            )
+            params = {"uprn": uprn.zfill(12)} if uprn else {"postcode": postcode}
+            resp = await self._epc_client.get("/domestic/search", params=params)
             if resp.status_code == 404:
+                return []
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            logger.warning("epc_search_error", status=exc.response.status_code, postcode=postcode)
+            return []
+        except Exception as e:
+            logger.warning("epc_search_exception", error=str(e), postcode=postcode)
+            return []
+        try:
+            body = resp.json()
+        except Exception:
+            return []
+        rows = body.get("data") or body.get("rows") or []
+        return rows if isinstance(rows, list) else []
+
+    async def _epc_certificate(self, certificate_number: str) -> dict | None:
+        """Fetch full certificate data (includes floor area) by certificate number."""
+        if not certificate_number:
+            return None
+        try:
+            resp = await self._epc_client.get(
+                "/certificate", params={"certificate_number": certificate_number}
+            )
+            if resp.status_code in (400, 404):
                 return None
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            logger.warning("epc_api_error", status=exc.response.status_code)
-            return None  # EPC is best-effort; don't block the valuation
+            logger.warning("epc_certificate_error", status=exc.response.status_code)
+            return None
+        except Exception as e:
+            logger.warning("epc_certificate_exception", error=str(e))
+            return None
         try:
-            rows = resp.json().get("rows", [])
+            return resp.json().get("data")
         except Exception:
-            rows = []
+            return None
+
+    @retry(stop=stop_after_attempt(2), wait=wait_exponential(min=1, max=4), reraise=True)
+    async def get_epc_data(self, postcode: str, line_1: str | None = None, uprn: str | None = None) -> dict | None:
+        """
+        Full EPC record for a property.
+
+        Two-step on the new gov.uk service: /domestic/search returns
+        summary rows only (no floor area), so we match the right row by
+        address then fetch its full certificate for the detailed fields.
+        Best-effort throughout - never blocks a valuation.
+        """
+        rows = await self._epc_search(postcode=postcode, uprn=uprn)
+        logger.info("epc_search", postcode=postcode, uprn=uprn, rows=len(rows))
         if not rows:
             return None
+
         row = rows[0]
-        if line_1:
-            import re as _re
-            num_match = _re.search(r"\d+", line_1)
-            target_num = num_match.group() if num_match else None
-            target_words = set(_re.findall(r"[a-zA-Z]+", line_1.lower())) - {"road", "street", "avenue", "lane", "close", "drive", "way", "court"}
-            best = None
-            best_score = -1
-            if target_num:
-                for r in rows:
-                    addr = (r.get("address") or "").lower()
-                    if not _re.search(r"\b" + target_num + r"\b", addr):
-                        continue
-                    addr_words = set(_re.findall(r"[a-zA-Z]+", addr)) - {"road", "street", "avenue", "lane", "close", "drive", "way", "court"}
-                    score = len(target_words & addr_words)
-                    if score > best_score:
-                        best_score = score
-                        best = r
-                if best is not None:
-                    row = best
-        return {
-            "floor_area_m2": float(row.get("total-floor-area", 0) or 0) or None,
-            "epc_rating": (row.get("current-energy-rating") or "")[:1].upper() or None,
-            "property_type": row.get("property-type", "").lower().replace(" ", "_"),
-            "inspection_date": row.get("inspection-date"),
-            # NOTE: EPC's "number-habitable-rooms" is bedrooms + receptions + studies
-            # combined, NOT a bedroom count. Kept separate (not aliased to
-            # "bedrooms") so callers can derive receptions = habitable_rooms - bedrooms
-            # using whatever bedroom count is confirmed from elsewhere, rather than
-            # silently treating total habitable rooms as if it were the bedroom count.
-            "habitable_rooms": int(row.get("number-habitable-rooms", 0) or 0) or None,
-            "construction_age_band": row.get("construction-age-band") or None,
+        if line_1 and not uprn:
+            best, best_score = None, 0
+            for r in rows:
+                score = self._addr_match_score(line_1, self._epc_addr_text(r))
+                if score > best_score:
+                    best, best_score = r, score
+            if best is not None:
+                row = best
+
+        cert_no = row.get("certificateNumber") or row.get("certificate_number")
+        cert = await self._epc_certificate(cert_no) or {}
+
+        def _pick(*keys):
+            for k in keys:
+                v = cert.get(k) if cert else None
+                if v not in (None, ""):
+                    return v
+            for k in keys:
+                v = row.get(k)
+                if v not in (None, ""):
+                    return v
+            return None
+
+        rating = _pick("current_energy_efficiency_band", "currentEnergyEfficiencyBand", "current-energy-rating")
+        habitable = _pick("number_habitable_rooms", "number-habitable-rooms", "numberHabitableRooms")
+        result = {
+            "floor_area_m2": self._extract_floor_area(cert) if cert else None,
+            "epc_rating": (str(rating) or "")[:1].upper() or None if rating else None,
+            "property_type": (str(_pick("property_type", "property-type", "propertyType") or "")).lower().replace(" ", "_") or None,
+            "inspection_date": _pick("inspection_date", "inspection-date", "registration_date", "registrationDate"),
+            # EPC habitable rooms = bedrooms + receptions + studies combined,
+            # NOT a bedroom count - kept separate so callers can derive
+            # receptions = habitable_rooms - confirmed bedrooms.
+            "habitable_rooms": int(habitable) if habitable else None,
+            "construction_age_band": _pick("construction_age_band", "construction-age-band", "constructionAgeBand"),
         }
+        logger.info(
+            "epc_matched", postcode=postcode,
+            floor_area=result["floor_area_m2"], rating=result["epc_rating"],
+        )
+        return result
+
+    async def get_epc_floor_areas(self, targets: list[tuple[str, str, str]]) -> dict[str, float]:
+        """
+        Batch-fetch real EPC floor areas for a list of properties.
+
+        `targets` is [(key, address_line, postcode), ...]. Returns
+        {key: floor_area_m2} containing only successful matches - callers
+        must handle missing keys (not every property has a matchable EPC).
+
+        Efficiency: one search per DISTINCT postcode (comparables cluster
+        geographically, so this is typically 2-3 calls, not one per
+        property), then certificate fetches run concurrently.
+        """
+        if not targets:
+            return {}
+
+        by_postcode: dict[str, list[tuple[str, str]]] = {}
+        for key, addr, postcode in targets:
+            if postcode:
+                by_postcode.setdefault(postcode.strip().upper(), []).append((key, addr))
+
+        search_results = await asyncio.gather(
+            *(self._epc_search(postcode=pc) for pc in by_postcode),
+            return_exceptions=True,
+        )
+
+        wanted: list[tuple[str, str]] = []
+        for (postcode, entries), rows in zip(by_postcode.items(), search_results):
+            if isinstance(rows, BaseException) or not rows:
+                continue
+            for key, addr in entries:
+                best, best_score = None, 0
+                for r in rows:
+                    score = self._addr_match_score(addr, self._epc_addr_text(r))
+                    if score > best_score:
+                        best, best_score = r, score
+                if best is not None:
+                    cert_no = best.get("certificateNumber") or best.get("certificate_number")
+                    if cert_no:
+                        wanted.append((key, cert_no))
+
+        if not wanted:
+            logger.info("epc_floor_areas", requested=len(targets), matched=0)
+            return {}
+
+        certs = await asyncio.gather(
+            *(self._epc_certificate(cn) for _, cn in wanted),
+            return_exceptions=True,
+        )
+
+        out: dict[str, float] = {}
+        for (key, _), cert in zip(wanted, certs):
+            if isinstance(cert, BaseException) or not cert:
+                continue
+            area = self._extract_floor_area(cert)
+            if area:
+                out[key] = area
+
+        logger.info("epc_floor_areas", requested=len(targets), matched=len(out))
+        return out
 
 
     async def get_propertydata_valuation(self, postcode: str, property_type: str, bedrooms: int | None, floor_area_m2: float | None, bathrooms: int | None = None, condition: str | None = None, parking: str | None = None, outdoor_space: str | None = None) -> dict | None:

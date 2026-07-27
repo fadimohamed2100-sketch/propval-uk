@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # External APIs
     LAND_REGISTRY_BASE_URL: str = "https://use-land-property-data.service.gov.uk/api/v1"
-    EPC_API_BASE_URL: str = "https://get-energy-performance-data.communities.gov.uk/api"
+    EPC_API_BASE_URL: str = "https://api.get-energy-performance-data.communities.gov.uk/api"
     EPC_API_KEY: str = ""
     EPC_API_EMAIL: str = ""
     EPC_BEARER_TOKEN: str = ""

@@ -391,6 +391,51 @@ async def _fetch_street_view_photo(location: str) -> str | None:
         return None
 
 
+_pd_service = None
+
+
+def _property_data_singleton():
+    """
+    Lazily-created shared PropertyDataService. Creating one per PDF would
+    leak an httpx connection pool on every report generated, since the
+    service owns long-lived clients that are never closed here.
+    """
+    global _pd_service
+    if _pd_service is None:
+        from services.property_data import PropertyDataService
+        _pd_service = PropertyDataService()
+    return _pd_service
+
+
+async def fetch_comparable_floor_areas(comparables: list[Comparable]) -> dict[str, float]:
+    """
+    Fetch each comparable's real measured floor area from its own EPC
+    certificate, so the report stops showing the subject property's size
+    next to every comparable.
+
+    Best-effort and display-only: comparables with no matchable EPC are
+    simply omitted (the template shows an em-dash). Batched one search per
+    distinct postcode, so 6 comparables typically cost 2-3 search calls
+    plus concurrent certificate fetches - all free government API calls.
+    """
+    if not comparables:
+        return {}
+    try:
+        targets = [
+            (str(c.id), c.address_snapshot or "", c.postcode_snapshot or "")
+            for c in comparables
+        ]
+        return await asyncio.wait_for(
+            _property_data_singleton().get_epc_floor_areas(targets), timeout=20.0
+        )
+    except asyncio.TimeoutError:
+        logger.warning("epc_floor_areas_timeout", count=len(comparables))
+        return {}
+    except Exception as e:
+        logger.warning("epc_floor_areas_error", error=str(e))
+        return {}
+
+
 async def fetch_comparable_photos(comparables: list[Comparable]) -> dict[str, str]:
     """
     Fetch Street View photos for a list of comparables concurrently.
@@ -560,7 +605,11 @@ def build_context(
                 "street":   ", ".join(p.strip() for p in comp.address_snapshot.split(",")[:2] if p.strip()) or comp.address_snapshot.strip(),
                 "distance": _distance(comp.distance_m),
                 "type":     (comp.property_type or "").replace("_", " ") or "flat",
-                "size":     _sqft(comp.floor_area_m2),
+                # Each comparable's OWN measured EPC floor area. Falls back
+                # to an em-dash rather than the subject's size, which would
+                # be misleading (previously every comparable displayed the
+                # subject property's square footage).
+                "size":     _sqft(comp.epc_floor_area_m2) if comp.epc_floor_area_m2 else "\u2014",
                 "price":    _gbp(comp.sale_price),
                 "date":     _fmt_date(comp.sale_date),
                 "photo_uri": (photo_uris or {}).get(str(comp.id)),
@@ -660,10 +709,22 @@ class PlaywrightPDFService:
         logger.info("pdf_generating", valuation_id=str(report.id))
 
         est_gbp = report.estimated_value / 100 if report.estimated_value else 0
-        photo_uris, real_chart = await asyncio.gather(
+        # Comparables missing a cached EPC floor area get one fetched now.
+        # Runs concurrently with photos and the chart so it adds ~1-2s, not
+        # 5-10s. DISPLAY ONLY - never fed back into the valuation engine.
+        needs_area = [
+            c for c in comparables[:6]
+            if c.epc_floor_area_m2 is None and c.postcode_snapshot
+        ]
+        photo_uris, real_chart, comp_areas = await asyncio.gather(
             fetch_comparable_photos(comparables[:6]),
             fetch_real_price_chart(property_.address.postcode, est_gbp),
+            fetch_comparable_floor_areas(needs_area),
         )
+        for comp in comparables[:6]:
+            area = comp_areas.get(str(comp.id))
+            if area:
+                comp.epc_floor_area_m2 = area
 
         context = build_context(
             report=report,
