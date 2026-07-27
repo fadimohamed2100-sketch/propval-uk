@@ -14,6 +14,17 @@ settings = get_settings()
 logger = get_logger(__name__)
 
 
+def _normalise_postcode(raw: str) -> str:
+    """
+    Canonical UK postcode form: uppercase, exactly one space before the
+    final three characters. "ha89dh" / "HA8  9DH" -> "HA8 9DH".
+    """
+    s = re.sub(r"\s+", "", (raw or "")).upper()
+    if len(s) < 5:
+        return s
+    return f"{s[:-3]} {s[-3:]}"
+
+
 def _normalise(address: str) -> str:
     """Lowercase, collapse whitespace, strip punctuation for dedup key."""
     s = address.lower().strip()
@@ -67,14 +78,40 @@ class GeocoderService:
         expected_postcode_match = re.search(
             r"[A-Za-z]{1,2}[0-9][0-9A-Za-z]?\s*[0-9][A-Za-z]{2}", address
         )
-        expected_outcode = (
-            expected_postcode_match.group(0).upper().split()[0]
+        expected_postcode = (
+            _normalise_postcode(expected_postcode_match.group(0))
             if expected_postcode_match else None
         )
+        expected_outcode = expected_postcode.split()[0] if expected_postcode else None
+
+        def _result_postcode(hit: dict) -> str | None:
+            pc = (hit.get("address", {}) or {}).get("postcode", "")
+            return _normalise_postcode(pc) if pc else None
 
         def _result_outcode(hit: dict) -> str | None:
-            pc = (hit.get("address", {}) or {}).get("postcode", "")
-            return pc.upper().split()[0] if pc else None
+            pc = _result_postcode(hit)
+            return pc.split()[0] if pc else None
+
+        # Nominatim frequently returns a NEIGHBOURING postcode on the same
+        # street (e.g. HA8 9DH -> HA8 9DJ). The outcode matches, so this
+        # slips past an outcode-only check - but every downstream lookup
+        # (comparables, Land Registry, EPC) then queries the wrong
+        # postcode and returns another property's data. Retry anchored to
+        # the postcode to pull coordinates for the right one.
+        if (
+            results and expected_postcode
+            and _result_postcode(results[0]) is not None
+            and _result_postcode(results[0]) != expected_postcode
+            and _result_outcode(results[0]) == expected_outcode
+        ):
+            logger.info(
+                "geocoding_unit_postcode_mismatch",
+                address=address, expected=expected_postcode,
+                got=_result_postcode(results[0]),
+            )
+            retry = await self._query_nominatim(expected_postcode)
+            if retry:
+                results = retry
 
         if results and expected_outcode and _result_outcode(results[0]) != expected_outcode:
             # Nominatim matched the free-text query (often the street name)
@@ -127,9 +164,20 @@ class GeocoderService:
             filter(None, [addr.get("house_number"), addr.get("road")])
         ) or address.split(",")[0].strip()
 
-        postcode = addr.get("postcode", "").upper().strip()
+        # The postcode the user supplied (typically chosen from the
+        # address dropdown, so authoritative) always wins over Nominatim's
+        # best guess. Nominatim is used for coordinates and locality only.
+        # This is what keeps comparables, Land Registry and EPC lookups
+        # pinned to the property actually being valued.
+        resolved = _normalise_postcode(addr.get("postcode", "").strip())
+        postcode = expected_postcode or resolved
         if not postcode:
             raise AddressNotFoundError(address)
+        if expected_postcode and resolved and resolved != expected_postcode:
+            logger.info(
+                "geocoding_postcode_overridden",
+                used=expected_postcode, nominatim_returned=resolved,
+            )
 
         return {
             "line_1": line_1,
