@@ -467,6 +467,21 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
         <p class="attr-value">{{ property.bathrooms }}</p>
       </div>
 
+      {% if property.epc and property.epc != "N/A" %}
+      {# EPC rating - only rendered when a real certificate was matched #}
+      <div class="attr-card">
+        <svg class="attr-icon" viewBox="0 0 44 44">
+          <rect x="7" y="8" width="30" height="28" rx="2" fill="none" stroke="#4B2590" stroke-width="2"/>
+          <line x1="12" y1="16" x2="22" y2="16" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="22" x2="26" y2="22" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="28" x2="19" y2="28" stroke="#4B2590" stroke-width="2" stroke-linecap="round"/>
+          <path d="M29 13l-4 7h4l-4 7" fill="none" stroke="#4B2590" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+        <p class="attr-label">EPC rating</p>
+        <p class="attr-value">{{ property.epc }}</p>
+      </div>
+      {% endif %}
+
     </div>{# end attr-grid #}
 
     {# Market insights #}
