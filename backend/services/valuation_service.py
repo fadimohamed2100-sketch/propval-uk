@@ -85,6 +85,7 @@ class ValuationService:
         force_refresh: bool = False,
         bedrooms: int | None = None,
         bathrooms: int | None = None,
+        receptions: int | None = None,
         condition: str | None = None,
         parking: str | None = None,
         outdoor_space: str | None = None,
@@ -171,6 +172,7 @@ class ValuationService:
                 bedrooms=effective_bedrooms,
                 property_type=property_.property_type,
                 bathrooms=bathrooms or property_.bathrooms,
+                receptions=receptions,
                 condition=condition,
                 parking=parking,
                 outdoor_space=outdoor_space,
@@ -488,6 +490,7 @@ class ValuationService:
         bedrooms: int | None = None,
         property_type: str | None = None,
         bathrooms: int | None = None,
+        receptions: int | None = None,
         condition: str | None = None,
         parking: str | None = None,
         outdoor_space: str | None = None,
@@ -510,6 +513,8 @@ class ValuationService:
         # cached report from before the change must not be reused.
         if bathrooms:
             filters.append(ValuationReport.methodology["subject_bathrooms"].astext == str(bathrooms))
+        if receptions is not None:
+            filters.append(ValuationReport.methodology["subject_receptions"].astext == str(receptions))
         if condition:
             filters.append(ValuationReport.methodology["subject_condition"].astext == condition)
         if parking:

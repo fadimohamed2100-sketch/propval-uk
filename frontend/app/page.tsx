@@ -31,6 +31,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
+  const [receptions, setReceptions] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [unitIdentifier, setUnitIdentifier] = useState("");
   const [selectedUprn, setSelectedUprn] = useState("");
@@ -91,6 +92,7 @@ export default function HomePage() {
       const payload: any = { address: query };
       if (bedrooms) payload.bedrooms = parseInt(bedrooms);
       if (bathrooms) payload.bathrooms = parseInt(bathrooms);
+      if (receptions) payload.receptions = parseInt(receptions);
       if (propertyType) payload.property_type = propertyType;
       if (unitIdentifier) payload.unit_identifier = unitIdentifier;
       if (selectedUprn) payload.uprn = selectedUprn;
@@ -261,6 +263,17 @@ export default function HomePage() {
                   </select>
                   {bathrooms === "custom" && (
                     <input type="number" min="9" placeholder="Enter bathrooms" className={selectClass + " mt-2"} onChange={e => setBathrooms(e.target.value)} />
+                  )}
+                </div>
+                <div>
+                  <label className={labelClass}>Reception rooms</label>
+                  <select value={receptions} onChange={e => setReceptions(e.target.value)} className={selectClass}>
+                    <option value="">Unknown</option>
+                    {[0,1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}
+                    <option value="custom">6+</option>
+                  </select>
+                  {receptions === "custom" && (
+                    <input type="number" min="7" placeholder="Enter receptions" className={selectClass + " mt-2"} onChange={e => setReceptions(e.target.value)} />
                   )}
                 </div>
                 <div>

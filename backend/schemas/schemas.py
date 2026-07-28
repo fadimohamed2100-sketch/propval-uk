@@ -104,6 +104,7 @@ class ValuationRequest(BaseModel):
     uprn: str | None = Field(default=None, max_length=20, description="UPRN of the selected unit, if known (from /address/units lookup)")
     bedrooms: int | None = None
     bathrooms: int | None = None
+    receptions: int | None = None
     condition: str | None = None
     parking: str | None = None
     outdoor_space: str | None = None

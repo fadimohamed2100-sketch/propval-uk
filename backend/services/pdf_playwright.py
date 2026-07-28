@@ -544,12 +544,19 @@ def build_context(
     elif methodology.get("construction_age_band"):
         year_built_val = methodology["construction_age_band"]
 
+    # A user-stated reception count beats the EPC-derived estimate: the
+    # EPC figure is habitable_rooms minus bedrooms, which silently
+    # miscounts studies, box rooms and open-plan layouts.
     receptions_val = None
-    habitable_rooms = methodology.get("habitable_rooms")
-    if habitable_rooms and property_.bedrooms is not None:
-        calc = habitable_rooms - property_.bedrooms
-        if calc >= 0:
-            receptions_val = str(calc)
+    stated = methodology.get("subject_receptions")
+    if stated is not None:
+        receptions_val = str(stated)
+    else:
+        habitable_rooms = methodology.get("habitable_rooms")
+        if habitable_rooms and property_.bedrooms is not None:
+            calc = habitable_rooms - property_.bedrooms
+            if calc >= 0:
+                receptions_val = str(calc)
 
     return {
         # ── Meta ──────────────────────────────────────────────

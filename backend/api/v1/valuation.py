@@ -129,6 +129,7 @@ async def run_valuation(
         force_refresh=body.force_refresh,
         bedrooms=body.bedrooms,
         bathrooms=body.bathrooms,
+        receptions=body.receptions,
         condition=body.condition,
         parking=body.parking,
         outdoor_space=body.outdoor_space,
