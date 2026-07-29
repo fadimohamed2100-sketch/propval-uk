@@ -189,6 +189,33 @@ def _distance(metres: int | None) -> str:
     return f"{metres / 1_609.34:.1f} miles"
 
 
+# Report the AUTHORITATIVE ORIGIN of each dataset rather than the vendor
+# we happen to buy access through. More credible to a vendor reading the
+# report ("HM Land Registry" carries real weight), and it avoids
+# advertising our suppliers to customers who could go direct.
+_SOURCE_LABELS = {
+    # PropertyData's sold-price comparables are Land Registry Price Paid data
+    "propertydata": "HM Land Registry",
+    "epc": "EPC Register",
+    # Homedata's agent statistics - no single authoritative body to cite
+    "homedata": "Local market data",
+}
+
+
+def _source_labels(source_apis: list[str] | None, has_real_chart: bool) -> str:
+    """Map internal source keys to public-facing origins, de-duplicated."""
+    labels: list[str] = []
+    for key in (source_apis or []):
+        label = _SOURCE_LABELS.get(key)
+        if label and label not in labels:
+            labels.append(label)
+    # The trend chart is genuine UK HPI data, fetched at render time and
+    # so not recorded in the report's stored source list.
+    if has_real_chart and "UK House Price Index" not in labels:
+        labels.append("UK House Price Index")
+    return ", ".join(labels) or "\u2014"
+
+
 def _weeks_from_days(days: float | None) -> str:
     if days is None:
         return "—"
@@ -615,7 +642,7 @@ def build_context(
             "last_sale_price": last_sale_display,
             "last_sale_date":  last_sale_sub or "N/A",
             "price_change":    price_change_str,
-            "source_apis":     ", ".join(report.source_apis or []),
+            "source_apis":     _source_labels(report.source_apis, chart is not None),
         },
 
         # ── Market ────────────────────────────────────────────

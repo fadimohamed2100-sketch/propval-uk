@@ -20,6 +20,24 @@ function ConfidenceBadge({ score }: { score: number }) {
   );
 }
 
+// Cite the authoritative origin of each dataset rather than the vendor
+// we buy access through - more credible on a client-facing report, and
+// avoids advertising our suppliers.
+const SOURCE_LABELS: Record<string, string> = {
+  propertydata: "HM Land Registry",
+  epc: "EPC Register",
+  homedata: "Local market data",
+};
+
+function sourceLabels(keys?: string[]): string {
+  const out: string[] = [];
+  for (const k of keys || []) {
+    const label = SOURCE_LABELS[k];
+    if (label && !out.includes(label)) out.push(label);
+  }
+  return out.join(", ");
+}
+
 export default function ResultsPage() {
   const params = useParams();
   const { getToken } = useAuth();
@@ -167,7 +185,7 @@ export default function ResultsPage() {
             <div><p className="label">Floor Area</p><p className="value">{method.subject_floor_area_m2 ? `${method.subject_floor_area_m2} m²` : "—"}</p></div>
             <div><p className="label">EPC Rating</p><p className="value">{method.subject_epc_rating || prop?.epc_rating || "—"}</p></div>
             <div><p className="label">Comparables Used</p><p className="value">{method.comps_used} of {method.comps_considered}</p></div>
-            <div><p className="label">Data Sources</p><p className="value" style={{ textTransform: "capitalize" }}>{(data.source_apis || []).join(", ") || "—"}</p></div>
+            <div><p className="label">Data Sources</p><p className="value">{sourceLabels(data.source_apis) || "—"}</p></div>
           </div>
         </div>
 
