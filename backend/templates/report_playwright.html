@@ -513,6 +513,14 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
 
     </div>{# end attr-grid #}
 
+    {% if coverage_note %}
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:2px;padding:12px 14px;margin-bottom:20px;">
+      <p style="font-size:8.5pt;color:#92400e;line-height:1.55;margin:0;">
+        <strong>Data coverage</strong> &middot; {{ coverage_note }}
+      </p>
+    </div>
+    {% endif %}
+
     {# Market insights #}
     <div class="section-header">
       <div class="section-header-box">Market insights</div>

@@ -302,6 +302,35 @@ def _postcode_to_hpi_region(postcode: str) -> str:
     return "england-and-wales"
 
 
+def data_coverage_note(postcode: str) -> str | None:
+    """
+    Flag reduced data coverage outside England & Wales.
+
+    HM Land Registry Price Paid data and the EPC register both cover
+    England and Wales only - Scotland (Registers of Scotland, Scottish
+    EPC register) and Northern Ireland (Land & Property Services) run
+    separate systems we do not query. Comparable sales and the regional
+    price index DO still work in both.
+
+    Returns None where coverage is complete, so callers can render
+    nothing rather than a reassuring-but-empty notice.
+    """
+    region = _postcode_to_hpi_region(postcode)
+    if region == "scotland":
+        place = "Scotland"
+    elif region == "northern-ireland":
+        place = "Northern Ireland"
+    else:
+        return None
+    return (
+        f"This property is in {place}. Last-sale history and EPC details "
+        f"(floor area, energy rating) are not available here, as {place} "
+        f"maintains its own registers separate from HM Land Registry and "
+        f"the England & Wales EPC register. Comparable sales and regional "
+        f"price trends are unaffected."
+    )
+
+
 def _format_hpi_label(ref_month: str) -> str:
     """Format a 'YYYY-MM' refMonth string as e.g. 'Apr-23'."""
     try:
@@ -611,6 +640,7 @@ def build_context(
     return {
         # ── Meta ──────────────────────────────────────────────
         "subject_photo": subject_photo,
+        "coverage_note": methodology.get("data_coverage_note"),
         "report_id":   str(report.id)[:8].upper(),
         "report_date": report.created_at.strftime("%d %b %Y"),
         "agent_name":  agent_name,

@@ -28,7 +28,7 @@ from models.orm import Address, Comparable, Property, ValuationReport
 from pathlib import Path
 
 from services.geocoder import GeocoderService
-from services.pdf_playwright import PlaywrightPDFService
+from services.pdf_playwright import PlaywrightPDFService, data_coverage_note
 from services.property_data import PropertyDataService
 from services.valuation_engine import ComparableInput, ValuationEngine
 
@@ -402,6 +402,9 @@ class ValuationService:
             methodology["previous_sale_date"] = str(own_sale_date_iso)
         if unit_identifier:
             methodology["unit_identifier"] = unit_identifier
+        coverage = data_coverage_note(address.postcode)
+        if coverage:
+            methodology["data_coverage_note"] = coverage
         # Mirror the EPC rating into methodology: the detail API returns
         # property as null, so the results page reads subject_* fields from
         # here (as it already does for type, bedrooms and floor area).

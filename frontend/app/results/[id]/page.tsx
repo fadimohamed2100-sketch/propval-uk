@@ -126,6 +126,14 @@ export default function ResultsPage() {
       </div>
 
       <div style={{ maxWidth: 880, margin: "0 auto", padding: "32px 20px" }}>
+        {method.data_coverage_note && (
+          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "12px 14px", marginBottom: 20 }}>
+            <p style={{ fontSize: 13, color: "#92400e", lineHeight: 1.55, fontFamily: "sans-serif", margin: 0 }}>
+              <strong>Data coverage</strong> &middot; {method.data_coverage_note}
+            </p>
+          </div>
+        )}
+
         <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <p style={{ fontSize: 13, color: "#999", fontFamily: "sans-serif", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Valuation Report</p>

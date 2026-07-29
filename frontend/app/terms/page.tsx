@@ -138,7 +138,7 @@ export default function TermsPage() {
         <Section title="12. Contact us">
           <P>If you have any questions about these terms, contact us at:</P>
           <p className="text-ink font-medium">
-            <Fill>hello@propvalue.co.uk</Fill><br />
+            <Fill>info@19sourcing.com</Fill><br />
             <Fill>19 Sourcing Ltd</Fill><br />
             <Fill>124 City Road, London, England, EC1V 2NX</Fill>
           </p>
