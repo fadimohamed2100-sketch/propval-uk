@@ -119,6 +119,26 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
 
 .agent-text { font-size: 10pt; color: var(--text-body); line-height: 1.7; }
 
+/* Subject property hero image (cover page) */
+.subject-photo-wrap {
+  position: relative;
+  margin-top: 20px;
+  border-radius: 2px;
+  overflow: hidden;
+  line-height: 0;
+}
+.subject-photo { width: 100%; height: 232px; object-fit: cover; display: block; }
+.subject-photo-credit {
+  position: absolute;
+  bottom: 6px; right: 8px;
+  font-size: 7pt;
+  color: white;
+  background: rgba(0,0,0,.45);
+  padding: 2px 6px;
+  border-radius: 2px;
+  line-height: 1.4;
+}
+
 /* ── Property summary page ─────────────────────────────────── */
 .intro-text { font-size: 10pt; color: #444; line-height: 1.6; margin-bottom: 22px; }
 
@@ -332,6 +352,15 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
           </p>
         </div>
       </div>
+
+      {% if subject_photo %}
+      {# Street View of the valued property - omitted entirely when
+         Google has no coverage, rather than showing a broken frame #}
+      <div class="subject-photo-wrap">
+        <img src="{{ subject_photo }}" class="subject-photo" alt="">
+        <span class="subject-photo-credit">Image &copy; Google</span>
+      </div>
+      {% endif %}
     </div>
 
     <div style="margin-top: 32px;">

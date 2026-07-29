@@ -348,7 +348,7 @@ async def fetch_real_price_chart(postcode: str, estimate_gbp: float) -> ChartGeo
     return compute_chart(subject_prices_k, avg_prices_k, labels, y_min=y_min, y_max=y_max, step=step)
 
 
-async def _fetch_street_view_photo(location: str) -> str | None:
+async def _fetch_street_view_photo(location: str, size: str = "216x148") -> str | None:
     """
     Fetch a Street View image for a free-text address/location string,
     returned as a base64 data: URI so it's embedded directly in the PDF
@@ -376,7 +376,7 @@ async def _fetch_street_view_photo(location: str) -> str | None:
             img_resp = await client.get(
                 "https://maps.googleapis.com/maps/api/streetview",
                 params={
-                    "size": "216x148",
+                    "size": size,
                     "location": location,
                     "fov": 80,
                     "key": settings.GOOGLE_MAPS_API_KEY,
@@ -436,6 +436,28 @@ async def fetch_comparable_floor_areas(comparables: list[Comparable]) -> dict[st
         return {}
 
 
+async def fetch_subject_photo(property_) -> str | None:
+    """
+    Street View shot of the property being valued, for the report cover.
+    Larger than the comparable thumbnails (640x360) so it holds up as a
+    hero image. Best-effort: returns None with no coverage or on error,
+    and the template simply omits the block.
+    """
+    address = property_.address
+    parts = [address.line_1, address.line_2, address.city, address.postcode]
+    location = ", ".join(p for p in parts if p)
+    try:
+        return await asyncio.wait_for(
+            _fetch_street_view_photo(location, size="640x360"), timeout=10.0
+        )
+    except asyncio.TimeoutError:
+        logger.warning("subject_photo_timeout", location=location)
+        return None
+    except Exception as e:
+        logger.warning("subject_photo_error", error=str(e))
+        return None
+
+
 async def fetch_comparable_photos(comparables: list[Comparable]) -> dict[str, str]:
     """
     Fetch Street View photos for a list of comparables concurrently.
@@ -471,6 +493,7 @@ def build_context(
     chart:       ChartGeometry | None = None,
     market_data: dict[str, Any] | None = None,
     photo_uris:  dict[str, str] | None = None,
+    subject_photo: str | None = None,
 ) -> dict[str, Any]:
     """
     Assemble the full Jinja2 template context from ORM objects.
@@ -560,6 +583,7 @@ def build_context(
 
     return {
         # ── Meta ──────────────────────────────────────────────
+        "subject_photo": subject_photo,
         "report_id":   str(report.id)[:8].upper(),
         "report_date": report.created_at.strftime("%d %b %Y"),
         "agent_name":  agent_name,
@@ -726,10 +750,11 @@ class PlaywrightPDFService:
             c for c in comparables[:6]
             if c.epc_floor_area_m2 is None and c.postcode_snapshot
         ]
-        photo_uris, real_chart, comp_areas = await asyncio.gather(
+        photo_uris, real_chart, comp_areas, subject_photo = await asyncio.gather(
             fetch_comparable_photos(comparables[:6]),
             fetch_real_price_chart(property_.address.postcode, est_gbp),
             fetch_comparable_floor_areas(needs_area),
+            fetch_subject_photo(property_),
         )
         for comp in comparables[:6]:
             area = comp_areas.get(str(comp.id))
@@ -744,6 +769,7 @@ class PlaywrightPDFService:
             chart=chart or real_chart,
             market_data=market_data,
             photo_uris=photo_uris,
+            subject_photo=subject_photo,
         )
 
         try:
