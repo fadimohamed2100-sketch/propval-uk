@@ -415,6 +415,77 @@ class PropertyDataService:
             logger.warning("propertydata_sold_prices_error", error=str(e))
         return []
 
+    async def get_propertydata_valuation_rent(
+        self,
+        postcode: str,
+        *,
+        internal_area_sqft: int | None = None,
+        property_type: str | None = None,
+        bedrooms: int | None = None,
+        bathrooms: int | None = None,
+        finish_quality: str | None = None,
+        outdoor_space: str | None = None,
+        off_street_parking: int | None = None,
+    ) -> float | None:
+        """
+        PropertyData's property-SPECIFIC rental AVM (/valuation-rent).
+
+        Materially better than the /rents area average because it accounts
+        for this property's floor area, type, bathrooms, finish and
+        outdoor space - all of which we already collect. Returns monthly
+        rent in POUNDS, or None to let the caller fall back.
+        """
+        if not settings.PROPERTYDATA_API_KEY:
+            return None
+        params = {
+            "key": settings.PROPERTYDATA_API_KEY,
+            "postcode": postcode,
+            "internal_area": internal_area_sqft,
+            "property_type": property_type,
+            "bedrooms": bedrooms,
+            "bathrooms": bathrooms,
+            "finish_quality": finish_quality,
+            "outdoor_space": outdoor_space,
+            "off_street_parking": off_street_parking,
+        }
+        params = {k: v for k, v in params.items() if v is not None}
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(
+                    "https://api.propertydata.co.uk/valuation-rent", params=params
+                )
+            logger.info(
+                "propertydata_valuation_rent_response",
+                status=resp.status_code, body=resp.text[:300],
+            )
+            if resp.status_code != 200:
+                return None
+            body = resp.json()
+            if body.get("status") != "success":
+                return None
+        except Exception as e:
+            logger.warning("propertydata_valuation_rent_error", error=str(e))
+            return None
+
+        data = body.get("data") or {}
+        # Response shape varies; try the known keys in order of preference.
+        raw = None
+        for key in ("estimate", "rent", "long_let", "result"):
+            val = data.get(key)
+            if isinstance(val, dict):
+                val = val.get("estimate") or val.get("average") or val.get("value")
+            if val not in (None, ""):
+                raw = val
+                break
+        if raw is None:
+            logger.warning("propertydata_valuation_rent_unparsed", keys=list(data)[:10])
+            return None
+        try:
+            return float(str(raw).replace("\u00a3", "").replace(",", "").strip())
+        except (TypeError, ValueError):
+            logger.warning("propertydata_valuation_rent_bad_value", raw=str(raw)[:50])
+            return None
+
     async def get_propertydata_rent(self, postcode: str, bedrooms: int | None) -> dict | None:
         """Call PropertyData /valuation-rent endpoint."""
         if not settings.PROPERTYDATA_API_KEY:

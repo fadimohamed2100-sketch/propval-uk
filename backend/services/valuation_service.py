@@ -280,9 +280,24 @@ class ValuationService:
             floor_area_m2=property_.floor_area_m2,
             bathrooms=bathrooms, condition=condition, parking=parking, outdoor_space=outdoor_space
         )
-        pd_rent = await self._property_data.get_propertydata_rent(
-            address.postcode, effective_bedrooms or property_.bedrooms
+        # Property-specific rental AVM first (accounts for floor area,
+        # type, bathrooms, finish, outdoor space). Falls back to the
+        # postcode-level area average, then to the engine's yield table.
+        pd_rent_monthly = await self._property_data.get_propertydata_valuation_rent(
+            address.postcode,
+            internal_area_sqft=int(float(property_.floor_area_m2) * 10.764) if property_.floor_area_m2 else None,
+            property_type=pd_property_type,
+            bedrooms=effective_bedrooms or property_.bedrooms,
+            bathrooms=bathrooms or property_.bathrooms,
+            finish_quality=condition,
+            outdoor_space=outdoor_space,
+            off_street_parking=1 if parking else 0,
         )
+        pd_rent = None
+        if pd_rent_monthly is None:
+            pd_rent = await self._property_data.get_propertydata_rent(
+                address.postcode, effective_bedrooms or property_.bedrooms
+            )
 
         # Run the engine
         try:
@@ -295,13 +310,38 @@ class ValuationService:
         except ValueError as exc:
             raise ValuationFailedError(str(exc))
 
-        # Apply PropertyData rental estimate if available
-        if pd_rent:
+        # Apply the best available rental figure. RENT_SANITY: a gross
+        # yield outside 1-15% almost always means a units mix-up (weekly
+        # vs monthly) or bad upstream data - reject it and keep the
+        # engine's conservative estimate rather than print a wrong number.
+        def _plausible(monthly_pence: int) -> bool:
+            if result.estimated_value <= 0 or monthly_pence <= 0:
+                return False
+            gross = (monthly_pence * 12 / result.estimated_value) * 100
+            return 1.0 <= gross <= 15.0
+
+        if pd_rent_monthly:
+            candidate = int(pd_rent_monthly * 100)
+            if _plausible(candidate):
+                result.rental_monthly = candidate
+                rent_source = "valuation_rent_avm"
+            else:
+                logger.warning(
+                    "rent_rejected_implausible",
+                    source="valuation_rent", monthly_gbp=pd_rent_monthly,
+                    value_gbp=result.estimated_value / 100,
+                )
+                rent_source = "yield_table"
+        elif pd_rent:
             weekly = pd_rent.get("data", {}).get("long_let", {}).get("average", 0)
-            if weekly:
-                result.rental_monthly = int(weekly * 52 / 12) * 100
-                if result.estimated_value > 0:
-                    result.rental_yield = round((result.rental_monthly * 12 / result.estimated_value) * 100, 1)
+            candidate = int(weekly * 52 / 12) * 100 if weekly else 0
+            if candidate and _plausible(candidate):
+                result.rental_monthly = candidate
+                rent_source = "area_average"
+            else:
+                rent_source = "yield_table"
+        else:
+            rent_source = "yield_table"
 
         # Apply lease years adjustment if leasehold
         lease_adjustment = 1.0
@@ -321,6 +361,19 @@ class ValuationService:
             result.estimated_value = int(result.estimated_value * lease_adjustment)
             result.range_low = int(result.range_low * lease_adjustment)
             result.range_high = int(result.range_high * lease_adjustment)
+
+        # Yield MUST be derived from the final value, otherwise a leasehold
+        # report shows a yield that contradicts its own value and rent.
+        if result.estimated_value > 0 and result.rental_monthly > 0:
+            result.rental_yield = round(
+                (result.rental_monthly * 12 / result.estimated_value) * 100, 1
+            )
+        logger.info(
+            "rental_estimate",
+            source=rent_source,
+            monthly_gbp=result.rental_monthly / 100,
+            yield_pct=result.rental_yield,
+        )
 
         # Inject previous sale info (from Homedata UPRN lookup) into methodology, if available.
         # Price and date are stored independently - Homedata sometimes returns one

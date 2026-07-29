@@ -280,9 +280,10 @@ export default function HomePage() {
                   <label className={labelClass}>Condition</label>
                   <select value={condition} onChange={e => setCondition(e.target.value)} className={selectClass}>
                     <option value="">Unknown</option>
-                    <option value="average">Poor</option>
-                    <option value="good">Average</option>
-                    <option value="excellent">Good</option>
+                    <option value="below_average">Below average</option>
+                    <option value="average">Average</option>
+                    <option value="good">Good</option>
+                    <option value="excellent">Excellent</option>
                   </select>
                 </div>
                 <div>
