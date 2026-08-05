@@ -159,8 +159,27 @@ class ValuationService:
                 property_.bathrooms = bathrooms
             elif epc and not property_.bathrooms:
                 property_.bathrooms = epc.get("bathrooms")
+            # Floor area now drives the valuation directly (£/m2 basis), so
+            # source priority matters. Homedata matches on UPRN - an exact
+            # property reference - whereas the EPC register is matched by
+            # address string and can land on a neighbour. On one live case
+            # the two disagreed by 63 m2 (£110k of value), so we keep the
+            # UPRN-matched figure and log the conflict rather than let the
+            # weaker match silently overwrite it.
             if epc and epc.get("floor_area_m2"):
-                property_.floor_area_m2 = epc.get("floor_area_m2")
+                existing = property_.floor_area_m2
+                incoming = epc.get("floor_area_m2")
+                if existing and not epc_is_register_source:
+                    property_.floor_area_m2 = incoming
+                elif existing and epc_is_register_source:
+                    if abs(float(existing) - float(incoming)) / float(existing) > 0.15:
+                        logger.warning(
+                            "floor_area_conflict",
+                            kept_m2=float(existing), epc_register_m2=float(incoming),
+                            postcode=address.postcode,
+                        )
+                else:
+                    property_.floor_area_m2 = incoming
             if epc and epc.get("epc_rating"):
                 property_.epc_rating = epc.get("epc_rating")
 
