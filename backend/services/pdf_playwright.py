@@ -702,6 +702,14 @@ def build_context(
             # Labels change when the agent supplied a contracted rent, so
             # the report does not present a known figure as an estimate.
             "rent_is_contracted": bool(methodology.get("rent_is_contracted")),
+            # Open-market estimate shown as a RANGE alongside any contractual
+            # rent. A single point figure implies more precision than an
+            # automated rental estimate can honestly claim.
+            "market_rent_range": (
+                f"{_gbp(int(methodology['market_rent_pence'] * 0.9))} - "
+                f"{_gbp(int(methodology['market_rent_pence'] * 1.1))} pcm"
+                if methodology.get("market_rent_pence") else None
+            ),
             "gross_yield":    f"{float(report.rental_yield or 0):.1f}%",
             "last_sale_price": last_sale_display,
             "last_sale_date":  last_sale_sub or "N/A",

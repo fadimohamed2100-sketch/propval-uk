@@ -708,8 +708,11 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
     {# Row 3: 2 cards #}
     <div class="val-row val-row-2">
       <div class="val-card">
-        <p class="val-label">{% if valuation.rent_is_contracted %}Contracted<br>rent{% else %}Estimated<br>rental value{% endif %}</p>
+        <p class="val-label">{% if valuation.rent_is_contracted %}Current contractual<br>rent{% else %}Estimated open-market<br>rental value{% endif %}</p>
         <p class="val-value orange">{{ valuation.rental_value }}</p>
+        {% if valuation.rent_is_contracted and valuation.market_rent_range %}
+        <p class="val-sub">Est. open market: {{ valuation.market_rent_range }}</p>
+        {% endif %}
       </div>
       <div class="val-card">
         <p class="val-label">{% if valuation.rent_is_contracted %}Gross<br>rental yield{% else %}Estimated gross<br>rental yield{% endif %}</p>

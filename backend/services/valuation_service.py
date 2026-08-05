@@ -430,6 +430,15 @@ class ValuationService:
             gross = (monthly_pence * 12 / result.estimated_value) * 100
             return 1.0 <= gross <= 15.0
 
+        # Compute the open-market estimate FIRST and keep it, even when a
+        # contractual rent is supplied. A let property has two distinct
+        # figures - what it currently earns, and what it would command on
+        # the open market - and collapsing them into one loses information
+        # an investor needs.
+        market_rent_pence = 0
+        if pd_rent_monthly:
+            market_rent_pence = int(pd_rent_monthly * 100)
+
         if actual_rent_pcm:
             # A rent the agent can evidence from the tenancy agreement beats
             # every estimate. One live report showed £936/mo estimated for a
@@ -479,6 +488,7 @@ class ValuationService:
                     )
                     candidate = scaled
             if candidate and _plausible(candidate):
+                market_rent_pence = candidate
                 result.rental_monthly = candidate
                 rent_source = "area_average_size_scaled"
             else:
@@ -539,6 +549,9 @@ class ValuationService:
         if actual_rent_pcm:
             methodology["actual_rent_pcm"] = actual_rent_pcm
             methodology["rent_is_contracted"] = True
+        if market_rent_pence:
+            methodology["market_rent_pence"] = market_rent_pence
+            methodology["rent_source"] = rent_source
         if last_sold_price:
             methodology["previous_sale_price_pence"] = int(float(last_sold_price) * 100) if isinstance(last_sold_price, (int, float)) else last_sold_price
         if last_sold_date:
