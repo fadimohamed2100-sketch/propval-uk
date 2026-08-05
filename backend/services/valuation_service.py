@@ -270,6 +270,21 @@ class ValuationService:
             own_sale_price_pence = lr_own_sale["price_pence"]
             own_sale_date_iso = lr_own_sale["date"]
 
+        # Real per-comparable floor areas from their own EPC certificates.
+        # Previously every comparable was given the SUBJECT's floor area,
+        # which made the engine's size ratio always exactly 1.0 - it could
+        # not size-adjust at all, so a large house landed on the price of
+        # its smaller neighbours. Free EPC lookups, batched one call per
+        # distinct postcode.
+        comp_areas: dict[str, float] = {}
+        try:
+            comp_areas = await self._property_data.get_epc_floor_areas([
+                (str(i), s.get("address") or "", s.get("postcode") or "")
+                for i, s in enumerate(raw_sales)
+            ])
+        except Exception as e:
+            logger.warning("comparable_floor_areas_failed", error=str(e))
+
         comp_inputs = [
             ComparableInput(
                 address=s["address"],
@@ -278,12 +293,14 @@ class ValuationService:
                 sale_date=__import__("datetime").date.fromisoformat(str(s["transaction_date"])[:10]) if s["transaction_date"] else None,
                 property_type=s.get("property_type") or property_.property_type,
                 bedrooms=property_.bedrooms,
-                floor_area_m2=property_.floor_area_m2,
+                # None (not the subject's area) when unknown - a wrong area
+                # is worse than no area, since it silently skews scoring.
+                floor_area_m2=comp_areas.get(str(i)),
                 source=s["source"],
                 distance_m=s.get("distance_m"),
                 source_url=s.get("source_url"),
             )
-            for s in raw_sales
+            for i, s in enumerate(raw_sales)
         ]
 
         # Get PropertyData direct valuation (primary)

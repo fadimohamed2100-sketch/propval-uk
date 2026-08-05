@@ -115,7 +115,13 @@ class ValuationEngine:
                 f"(minimum {self.MIN_COMPS} required)."
             )
 
-        point_estimate = self._weighted_median(scored)
+        # Size-adjusted (£/m2) estimate where we have real comparable
+        # floor areas; raw-price median otherwise.
+        point_estimate = self._weighted_median_price_per_m2(scored, subject_floor_area_m2)
+        valuation_basis = "weighted_median_price_per_m2"
+        if point_estimate is None or point_estimate <= 0:
+            point_estimate = self._weighted_median(scored)
+            valuation_basis = "weighted_median_price"
         confidence = self._confidence(scored)
         spread = self._spread(confidence)
 
@@ -154,7 +160,10 @@ class ValuationEngine:
         ]
 
         methodology = {
-            "method": "weighted_comparable_median",
+            "method": valuation_basis,
+            "comps_with_floor_area": sum(
+                1 for cc, _ in scored if cc.floor_area_m2 and float(cc.floor_area_m2) > 0
+            ),
             "comps_considered": len(comps),
             "comps_used": len(scored),
             "subject_type": subject_type,
@@ -169,6 +178,7 @@ class ValuationEngine:
             estimate_gbp=point_estimate / 100,
             confidence=confidence,
             comps_used=len(scored),
+            basis=valuation_basis,
         )
 
         return ValuationResult(
@@ -250,6 +260,46 @@ class ValuationEngine:
     # ------------------------------------------------------------------
     # Weighted median
     # ------------------------------------------------------------------
+    @staticmethod
+    def _weighted_median_price_per_m2(
+        scored: list[tuple[ComparableInput, float]],
+        subject_floor_area_m2: float,
+    ) -> int | None:
+        """
+        Size-adjusted estimate: weighted median of comparable £/m2, scaled
+        to the subject's floor area.
+
+        The raw-price median below ignores size entirely, so a large house
+        among smaller neighbours lands on THEIR price - a 2,174 sqft
+        six-bed was valued at the price of an 1,100 sqft semi. Valuing on
+        £/m2 is also how professional AVMs work.
+
+        Returns None when too few comparables have a real floor area, so
+        the caller falls back to the raw-price median rather than
+        extrapolating from one or two data points.
+        """
+        usable = [
+            (c, s) for c, s in scored
+            if c.floor_area_m2 and float(c.floor_area_m2) > 0 and c.sale_price > 0
+        ]
+        if len(usable) < ValuationEngine.MIN_COMPS or not subject_floor_area_m2:
+            return None
+
+        by_ppsm = sorted(usable, key=lambda x: x[0].sale_price / float(x[0].floor_area_m2))
+        total_weight = sum(s for _, s in by_ppsm)
+        if total_weight <= 0:
+            mid = by_ppsm[len(by_ppsm) // 2][0]
+            ppsm = mid.sale_price / float(mid.floor_area_m2)
+        else:
+            cumulative = 0.0
+            ppsm = by_ppsm[-1][0].sale_price / float(by_ppsm[-1][0].floor_area_m2)
+            for comp, score in by_ppsm:
+                cumulative += score / total_weight
+                if cumulative >= 0.5:
+                    ppsm = comp.sale_price / float(comp.floor_area_m2)
+                    break
+        return int(ppsm * float(subject_floor_area_m2))
+
     @staticmethod
     def _weighted_median(
         scored: list[tuple[ComparableInput, float]],
