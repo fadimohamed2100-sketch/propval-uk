@@ -220,8 +220,21 @@ class ValuationService:
             }
             allowed = type_aliases.get(property_.property_type, {property_.property_type})
             filtered_sales = [s for s in raw_sales if (s.get("property_type") or "").lower().replace(" ", "_") in allowed]
-            if filtered_sales:
+            # Only narrow to same-type comparables if enough survive. A
+            # detached 6-bed in a street of terraces was filtered from 100
+            # analysed sales down to ONE, failing the whole valuation.
+            # A slightly mixed comparable set beats no valuation at all -
+            # the engine already scores type similarity when ranking.
+            # +1 because the subject's own sale is removed further below.
+            min_needed = ValuationEngine.MIN_COMPS + 1
+            if len(filtered_sales) >= min_needed:
                 raw_sales = filtered_sales
+            elif filtered_sales:
+                logger.info(
+                    "comparable_type_filter_relaxed",
+                    property_type=property_.property_type,
+                    same_type=len(filtered_sales), total=len(raw_sales),
+                )
 
         # Check whether the subject property's own historical sale appears in
         # this same official Land Registry sold-prices dataset. If so, it's a
