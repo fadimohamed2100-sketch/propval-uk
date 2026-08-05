@@ -32,6 +32,7 @@ export default function HomePage() {
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [receptions, setReceptions] = useState("");
+  const [constructionDate, setConstructionDate] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [unitIdentifier, setUnitIdentifier] = useState("");
   const [selectedUprn, setSelectedUprn] = useState("");
@@ -93,6 +94,7 @@ export default function HomePage() {
       if (bedrooms) payload.bedrooms = parseInt(bedrooms);
       if (bathrooms) payload.bathrooms = parseInt(bathrooms);
       if (receptions) payload.receptions = parseInt(receptions);
+      if (constructionDate) payload.construction_date = constructionDate;
       if (propertyType) payload.property_type = propertyType;
       if (unitIdentifier) payload.unit_identifier = unitIdentifier;
       if (selectedUprn) payload.uprn = selectedUprn;
@@ -264,6 +266,19 @@ export default function HomePage() {
                   {bathrooms === "custom" && (
                     <input type="number" min="9" placeholder="Enter bathrooms" className={selectClass + " mt-2"} onChange={e => setBathrooms(e.target.value)} />
                   )}
+                </div>
+                <div>
+                  <label className={labelClass}>Property age</label>
+                  <select value={constructionDate} onChange={e => setConstructionDate(e.target.value)} className={selectClass}>
+                    <option value="">Unknown</option>
+                    <option value="pre_1914">Pre-1914</option>
+                    <option value="1914_1939">1914 - 1939</option>
+                    <option value="1940_1959">1940 - 1959</option>
+                    <option value="1960_1979">1960 - 1979</option>
+                    <option value="1980_1999">1980 - 1999</option>
+                    <option value="2000_2010">2000 - 2010</option>
+                    <option value="post_2010">2011 onwards</option>
+                  </select>
                 </div>
                 <div>
                   <label className={labelClass}>Reception rooms</label>

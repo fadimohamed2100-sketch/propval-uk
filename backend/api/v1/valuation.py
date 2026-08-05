@@ -130,6 +130,7 @@ async def run_valuation(
         bedrooms=body.bedrooms,
         bathrooms=body.bathrooms,
         receptions=body.receptions,
+        construction_date=body.construction_date,
         condition=body.condition,
         parking=body.parking,
         outdoor_space=body.outdoor_space,

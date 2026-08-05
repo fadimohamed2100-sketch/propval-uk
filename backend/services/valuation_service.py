@@ -86,6 +86,7 @@ class ValuationService:
         bedrooms: int | None = None,
         bathrooms: int | None = None,
         receptions: int | None = None,
+        construction_date: str | None = None,
         condition: str | None = None,
         parking: str | None = None,
         outdoor_space: str | None = None,
@@ -192,6 +193,7 @@ class ValuationService:
                 property_type=property_.property_type,
                 bathrooms=bathrooms or property_.bathrooms,
                 receptions=receptions,
+                construction_date=construction_date,
                 condition=condition,
                 parking=parking,
                 outdoor_space=outdoor_space,
@@ -332,7 +334,11 @@ class ValuationService:
             epc_for_enrichment = await self._property_data.get_epc_data(
                 address.postcode, line_1=unit_identifier or address.line_1, uprn=uprn
             ) or epc_for_enrichment
-        pd_construction = self._property_data._pd_construction_date(
+        # A user-stated construction era beats the EPC band: the agent is
+        # standing in the property, and the EPC certificate frequently
+        # omits the age band entirely - without it PropertyData's AVM
+        # cannot run at all.
+        pd_construction = construction_date or self._property_data._pd_construction_date(
             (epc_for_enrichment or {}).get("construction_age_band")
         )
         pd_valuation_pence = await self._property_data.get_propertydata_valuation(
@@ -648,6 +654,7 @@ class ValuationService:
         property_type: str | None = None,
         bathrooms: int | None = None,
         receptions: int | None = None,
+        construction_date: str | None = None,
         condition: str | None = None,
         parking: str | None = None,
         outdoor_space: str | None = None,
@@ -672,6 +679,8 @@ class ValuationService:
             filters.append(ValuationReport.methodology["subject_bathrooms"].astext == str(bathrooms))
         if receptions is not None:
             filters.append(ValuationReport.methodology["subject_receptions"].astext == str(receptions))
+        if construction_date:
+            filters.append(ValuationReport.methodology["subject_construction_date"].astext == construction_date)
         if condition:
             filters.append(ValuationReport.methodology["subject_condition"].astext == condition)
         if parking:

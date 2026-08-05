@@ -292,6 +292,16 @@ class PropertyDataService:
                     return v
             return None
 
+        # Diagnostic: construction age band drives PropertyData's AVM, and
+        # the certificate payload does not always carry it under the names
+        # we expect. Log the available keys once so the correct field can
+        # be identified rather than guessed at.
+        if cert and not any(
+            k in cert for k in
+            ("construction_age_band", "construction-age-band", "constructionAgeBand")
+        ):
+            logger.info("epc_cert_keys", keys=sorted(cert.keys())[:40])
+
         rating = _pick("current_energy_efficiency_band", "currentEnergyEfficiencyBand", "current-energy-rating")
         habitable = _pick("number_habitable_rooms", "number-habitable-rooms", "numberHabitableRooms")
         result = {

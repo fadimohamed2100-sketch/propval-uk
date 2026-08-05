@@ -105,6 +105,7 @@ class ValuationRequest(BaseModel):
     bedrooms: int | None = None
     bathrooms: int | None = None
     receptions: int | None = None
+    construction_date: str | None = None
     condition: str | None = None
     parking: str | None = None
     outdoor_space: str | None = None
