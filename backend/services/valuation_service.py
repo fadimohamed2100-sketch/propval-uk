@@ -292,6 +292,9 @@ class ValuationService:
             finish_quality=condition,
             outdoor_space=outdoor_space,
             off_street_parking=1 if parking else 0,
+            construction_date=self._property_data._pd_construction_date(
+                (epc or {}).get("construction_age_band")
+            ),
         )
         pd_rent = None
         if pd_rent_monthly is None:

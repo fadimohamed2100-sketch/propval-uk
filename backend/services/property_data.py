@@ -11,7 +11,7 @@ a registered email; supply EPC_API_KEY in .env as "email:apikey").
 import asyncio
 import httpx
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from core.config import get_settings
 from core.exceptions import ExternalAPIError
 from core.logging import get_logger
@@ -28,6 +28,25 @@ _LR_GENERIC = {
 _LR_NUM_RE = re.compile(r"[0-9]+[a-z]?")
 _LR_FLAT_RE = re.compile(r"(?:flat|apartment|apt|unit)[\s.]*([0-9]+[a-z]?)", re.I)
 _LR_POSTCODE_RE = re.compile(r"[a-z]{1,2}[0-9][0-9a-z]?\s*[0-9][a-z]{2}", re.I)
+
+
+def _lr_parse_date(raw: str) -> str | None:
+    """
+    Land Registry returns dates as RFC-2822 ("Fri, 09 May 2008"), not ISO.
+    Slicing the first 10 chars produced "Fri, 09 Ma", and sorting those
+    strings ordered by WEEKDAY NAME rather than chronologically.
+    Normalises the known formats to YYYY-MM-DD.
+    """
+    if not raw:
+        return None
+    text = str(raw).strip()
+    for fmt in ("%a, %d %b %Y", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%d %b %Y"):
+        try:
+            return datetime.strptime(text[:19] if "T" in text else text, fmt).date().isoformat()
+        except ValueError:
+            continue
+    logger.warning("land_registry_unparsed_date", raw=text[:40])
+    return None
 
 
 def _lr_address_parts(line_1: str) -> tuple[set[str], set[str], str | None]:
@@ -392,8 +411,14 @@ class PropertyDataService:
                 "max_age": 48,
                 "points": 100,
             }
-            if bedrooms:
+            # PropertyData rejects bedrooms > 5 outright ("Invalid filter:
+            # bedrooms", HTTP 422) which returned ZERO comparables and
+            # failed the whole valuation. Omit the filter for larger homes
+            # rather than lose every comparable.
+            if bedrooms and bedrooms <= 5:
                 params["bedrooms"] = bedrooms
+            elif bedrooms:
+                logger.info("propertydata_bedrooms_filter_omitted", bedrooms=bedrooms)
             if tenure:
                 params["tenure"] = tenure
             async with httpx.AsyncClient(timeout=15.0) as client:
@@ -462,6 +487,32 @@ class PropertyDataService:
             logger.warning("propertydata_sold_prices_error", error=str(e))
         return []
 
+    @staticmethod
+    def _pd_construction_date(age_band: str | None) -> str | None:
+        """
+        Map an EPC construction age band to PropertyData's construction_date
+        value. Required by /valuation-rent - without it the call 400s.
+        """
+        if not age_band:
+            return None
+        years = re.findall(r"(1[89][0-9]{2}|20[0-9]{2})", str(age_band))
+        if not years:
+            return None
+        year = int(years[0])
+        if year < 1914:
+            return "pre_1914"
+        if year < 1940:
+            return "1914_1939"
+        if year < 1960:
+            return "1940_1959"
+        if year < 1980:
+            return "1960_1979"
+        if year < 2000:
+            return "1980_1999"
+        if year < 2011:
+            return "2000_2010"
+        return "post_2010"
+
     async def get_propertydata_valuation_rent(
         self,
         postcode: str,
@@ -473,6 +524,7 @@ class PropertyDataService:
         finish_quality: str | None = None,
         outdoor_space: str | None = None,
         off_street_parking: int | None = None,
+        construction_date: str | None = None,
     ) -> float | None:
         """
         PropertyData's property-SPECIFIC rental AVM (/valuation-rent).
@@ -484,9 +536,21 @@ class PropertyDataService:
         """
         if not settings.PROPERTYDATA_API_KEY:
             return None
+        # construction_date and internal_area are REQUIRED by this endpoint
+        # (it 400s without them). Skip straight to the area-average
+        # fallback rather than burn an API credit on a call that cannot
+        # succeed.
+        if not construction_date or not internal_area_sqft:
+            logger.info(
+                "propertydata_valuation_rent_skipped",
+                has_construction_date=bool(construction_date),
+                has_internal_area=bool(internal_area_sqft),
+            )
+            return None
         params = {
             "key": settings.PROPERTYDATA_API_KEY,
             "postcode": postcode,
+            "construction_date": construction_date,
             "internal_area": internal_area_sqft,
             "property_type": property_type,
             "bedrooms": bedrooms,
@@ -804,9 +868,12 @@ class PropertyDataService:
             date_val = it.get("transactionDate")
             if not (price and date_val):
                 continue
+            iso_date = _lr_parse_date(date_val)
+            if not iso_date:
+                continue
             score = _lr_match_score(target_nums, target_words, flat_no, addr_text)
             if score > 0:
-                scored.append((score, str(date_val), int(price)))
+                scored.append((score, iso_date, int(price)))
 
         matches = []
         if scored:
@@ -824,7 +891,7 @@ class PropertyDataService:
         matches.sort(key=lambda m: m[0], reverse=True)
         latest_date, latest_price = matches[0]
         logger.info("land_registry_match_found", postcode=postcode, date=latest_date, price=latest_price)
-        return {"price_pence": latest_price * 100, "date": latest_date[:10]}
+        return {"price_pence": latest_price * 100, "date": latest_date}
 
     async def close(self) -> None:
         await self._lr_client.aclose()
