@@ -453,9 +453,34 @@ class ValuationService:
         elif pd_rent:
             weekly = pd_rent.get("data", {}).get("long_let", {}).get("average", 0)
             candidate = int(weekly * 52 / 12) * 100 if weekly else 0
+            # The area average is a postcode-and-bedroom-band figure - it has
+            # no idea this property is far bigger than the local norm. Scale
+            # by floor area against the median comparable, damped to 60% of
+            # the raw ratio because rent rises with size more slowly than
+            # capital value does, and capped so a data glitch cannot produce
+            # a wild figure.
+            comp_areas_known = sorted(
+                float(ci.floor_area_m2) for ci in comp_inputs
+                if ci.floor_area_m2 and float(ci.floor_area_m2) > 0
+            )
+            if candidate and comp_areas_known and property_.floor_area_m2:
+                median_comp_area = comp_areas_known[len(comp_areas_known) // 2]
+                raw_ratio = float(property_.floor_area_m2) / median_comp_area
+                if raw_ratio > 1.15:
+                    damped = 1 + (raw_ratio - 1) * 0.6
+                    damped = min(damped, 2.5)
+                    scaled = int(candidate * damped)
+                    logger.info(
+                        "rent_scaled_for_size",
+                        subject_m2=float(property_.floor_area_m2),
+                        median_comp_m2=median_comp_area,
+                        raw_ratio=round(raw_ratio, 2), applied=round(damped, 2),
+                        before_gbp=candidate / 100, after_gbp=scaled / 100,
+                    )
+                    candidate = scaled
             if candidate and _plausible(candidate):
                 result.rental_monthly = candidate
-                rent_source = "area_average"
+                rent_source = "area_average_size_scaled"
             else:
                 rent_source = "yield_table"
         else:

@@ -667,10 +667,13 @@ class PropertyDataService:
             params = {
                 "key": settings.PROPERTYDATA_API_KEY,
                 "postcode": postcode,
-                # PropertyData rejects bedrooms > 5 ("Invalid filter"), which
-                # silently dropped rent back to the crude yield table and
-                # produced absurdly low figures for large homes.
-                "bedrooms": str(bedrooms) if (bedrooms and bedrooms <= 5) else None,
+                # PropertyData rejects bedrooms > 5 ("Invalid filter"). We
+                # previously dropped the filter entirely, which returned the
+                # average rent across ALL property sizes in the postcode -
+                # dominated by 2-3 bed terraces, so a six-bed 2,174 sqft
+                # house was valued at £936/mo. Clamping to the largest
+                # supported band (5) is far closer than no filter at all.
+                "bedrooms": str(min(bedrooms, 5)) if bedrooms else None,
             }
             params = {k: v for k, v in params.items() if v is not None}
             async with httpx.AsyncClient(timeout=15.0) as client:
