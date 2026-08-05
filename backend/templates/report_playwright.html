@@ -708,11 +708,11 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
     {# Row 3: 2 cards #}
     <div class="val-row val-row-2">
       <div class="val-card">
-        <p class="val-label">Estimated<br>rental value</p>
+        <p class="val-label">{% if valuation.rent_is_contracted %}Contracted<br>rent{% else %}Estimated<br>rental value{% endif %}</p>
         <p class="val-value orange">{{ valuation.rental_value }}</p>
       </div>
       <div class="val-card">
-        <p class="val-label">Estimated gross<br>rental yield</p>
+        <p class="val-label">{% if valuation.rent_is_contracted %}Gross<br>rental yield{% else %}Estimated gross<br>rental yield{% endif %}</p>
         <p class="val-value dark">{{ valuation.gross_yield }}</p>
       </div>
     </div>

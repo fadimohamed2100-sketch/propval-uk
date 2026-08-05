@@ -699,6 +699,9 @@ def build_context(
             "confidence":     _confidence_label(float(report.confidence_score or 0)),
             "confidence_pct": f"{round((report.confidence_score or 0) * 100)}%",
             "rental_value":   f"{_gbp(report.rental_monthly)} pcm",
+            # Labels change when the agent supplied a contracted rent, so
+            # the report does not present a known figure as an estimate.
+            "rent_is_contracted": bool(methodology.get("rent_is_contracted")),
             "gross_yield":    f"{float(report.rental_yield or 0):.1f}%",
             "last_sale_price": last_sale_display,
             "last_sale_date":  last_sale_sub or "N/A",

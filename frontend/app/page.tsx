@@ -33,6 +33,7 @@ export default function HomePage() {
   const [bathrooms, setBathrooms] = useState("");
   const [receptions, setReceptions] = useState("");
   const [constructionDate, setConstructionDate] = useState("");
+  const [actualRent, setActualRent] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [unitIdentifier, setUnitIdentifier] = useState("");
   const [selectedUprn, setSelectedUprn] = useState("");
@@ -95,6 +96,7 @@ export default function HomePage() {
       if (bathrooms) payload.bathrooms = parseInt(bathrooms);
       if (receptions) payload.receptions = parseInt(receptions);
       if (constructionDate) payload.construction_date = constructionDate;
+      if (actualRent) payload.actual_rent_pcm = parseInt(actualRent);
       if (propertyType) payload.property_type = propertyType;
       if (unitIdentifier) payload.unit_identifier = unitIdentifier;
       if (selectedUprn) payload.uprn = selectedUprn;
@@ -266,6 +268,16 @@ export default function HomePage() {
                   {bathrooms === "custom" && (
                     <input type="number" min="9" placeholder="Enter bathrooms" className={selectClass + " mt-2"} onChange={e => setBathrooms(e.target.value)} />
                   )}
+                </div>
+                <div>
+                  <label className={labelClass}>Actual rent (pcm, optional)</label>
+                  <input
+                    type="number" min="0" inputMode="numeric"
+                    placeholder="e.g. 2100 if let"
+                    value={actualRent}
+                    onChange={e => setActualRent(e.target.value)}
+                    className={selectClass}
+                  />
                 </div>
                 <div>
                   <label className={labelClass}>Property age</label>

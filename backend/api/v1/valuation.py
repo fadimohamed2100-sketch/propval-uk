@@ -131,6 +131,7 @@ async def run_valuation(
         bathrooms=body.bathrooms,
         receptions=body.receptions,
         construction_date=body.construction_date,
+        actual_rent_pcm=body.actual_rent_pcm,
         condition=body.condition,
         parking=body.parking,
         outdoor_space=body.outdoor_space,

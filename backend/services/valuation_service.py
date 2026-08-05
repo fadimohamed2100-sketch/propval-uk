@@ -87,6 +87,7 @@ class ValuationService:
         bathrooms: int | None = None,
         receptions: int | None = None,
         construction_date: str | None = None,
+        actual_rent_pcm: int | None = None,
         condition: str | None = None,
         parking: str | None = None,
         outdoor_space: str | None = None,
@@ -194,6 +195,7 @@ class ValuationService:
                 bathrooms=bathrooms or property_.bathrooms,
                 receptions=receptions,
                 construction_date=construction_date,
+                actual_rent_pcm=actual_rent_pcm,
                 condition=condition,
                 parking=parking,
                 outdoor_space=outdoor_space,
@@ -428,7 +430,15 @@ class ValuationService:
             gross = (monthly_pence * 12 / result.estimated_value) * 100
             return 1.0 <= gross <= 15.0
 
-        if pd_rent_monthly:
+        if actual_rent_pcm:
+            # A rent the agent can evidence from the tenancy agreement beats
+            # every estimate. One live report showed £936/mo estimated for a
+            # property actually company-let at £2,100/mo - the automated
+            # figure cannot know about a real tenancy. No plausibility guard
+            # here: the user has the contract, we do not.
+            result.rental_monthly = int(actual_rent_pcm) * 100
+            rent_source = "user_provided_actual"
+        elif pd_rent_monthly:
             candidate = int(pd_rent_monthly * 100)
             if _plausible(candidate):
                 result.rental_monthly = candidate
@@ -501,6 +511,9 @@ class ValuationService:
             methodology["subject_tenure"] = tenure
         if lease_years:
             methodology["subject_lease_years"] = lease_years
+        if actual_rent_pcm:
+            methodology["actual_rent_pcm"] = actual_rent_pcm
+            methodology["rent_is_contracted"] = True
         if last_sold_price:
             methodology["previous_sale_price_pence"] = int(float(last_sold_price) * 100) if isinstance(last_sold_price, (int, float)) else last_sold_price
         if last_sold_date:
@@ -657,6 +670,7 @@ class ValuationService:
         bathrooms: int | None = None,
         receptions: int | None = None,
         construction_date: str | None = None,
+        actual_rent_pcm: int | None = None,
         condition: str | None = None,
         parking: str | None = None,
         outdoor_space: str | None = None,
@@ -683,6 +697,8 @@ class ValuationService:
             filters.append(ValuationReport.methodology["subject_receptions"].astext == str(receptions))
         if construction_date:
             filters.append(ValuationReport.methodology["subject_construction_date"].astext == construction_date)
+        if actual_rent_pcm:
+            filters.append(ValuationReport.methodology["actual_rent_pcm"].astext == str(actual_rent_pcm))
         if condition:
             filters.append(ValuationReport.methodology["subject_condition"].astext == condition)
         if parking:
