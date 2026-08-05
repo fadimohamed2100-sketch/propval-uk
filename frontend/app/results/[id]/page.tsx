@@ -11,8 +11,10 @@ function fmt(n: number) {
 
 function ConfidenceBadge({ score }: { score: number }) {
   const pct = Math.round(score * 100);
-  const label = pct >= 80 ? "High" : pct >= 60 ? "Medium" : "Low";
-  const color = pct >= 80 ? "#22c55e" : pct >= 60 ? "#f59e0b" : "#ef4444";
+  // Thresholds MUST match _confidence_label in pdf_playwright.py, or the
+  // same valuation reads "Low" on screen and "medium" in the PDF.
+  const label = pct >= 75 ? "High" : pct >= 55 ? "Medium" : "Low";
+  const color = pct >= 75 ? "#22c55e" : pct >= 55 ? "#f59e0b" : "#ef4444";
   return (
     <span style={{ background: color + "20", color, border: `1px solid ${color}40`, borderRadius: 6, padding: "2px 10px", fontSize: 13, fontWeight: 600 }}>
       {label} Confidence · {pct}%

@@ -605,11 +605,15 @@ class PropertyDataService:
             params = {
                 "key": settings.PROPERTYDATA_API_KEY,
                 "postcode": postcode,
-                "bedrooms": str(bedrooms) if bedrooms else None,
+                # PropertyData rejects bedrooms > 5 ("Invalid filter"), which
+                # silently dropped rent back to the crude yield table and
+                # produced absurdly low figures for large homes.
+                "bedrooms": str(bedrooms) if (bedrooms and bedrooms <= 5) else None,
             }
             params = {k: v for k, v in params.items() if v is not None}
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.get("https://api.propertydata.co.uk/rents", params=params)
+                logger.info("propertydata_rents_response", status=resp.status_code, body=resp.text[:200])
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get("status") == "success":
