@@ -529,6 +529,8 @@ class ValuationService:
         if epc_for_enrichment:
             if epc_for_enrichment.get("construction_age_band"):
                 methodology["construction_age_band"] = epc_for_enrichment["construction_age_band"]
+            if epc_for_enrichment.get("post_town"):
+                methodology["post_town"] = str(epc_for_enrichment["post_town"]).title()
             if epc_for_enrichment.get("habitable_rooms"):
                 methodology["habitable_rooms"] = epc_for_enrichment["habitable_rooms"]
 

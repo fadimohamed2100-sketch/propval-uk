@@ -216,6 +216,37 @@ def _source_labels(source_apis: list[str] | None, has_real_chart: bool) -> str:
     return ", ".join(labels) or "\u2014"
 
 
+def _type_plural(property_type: str | None) -> str:
+    """Plural label for chart captions, matching the actual property type."""
+    return {
+        "flat": "flats/maisonettes",
+        "maisonette": "flats/maisonettes",
+        "terraced": "terraced houses",
+        "semi_detached": "semi-detached houses",
+        "detached": "detached houses",
+        "bungalow": "bungalows",
+    }.get((property_type or "").lower(), "properties")
+
+
+def _sane_asking_pct(value) -> float | None:
+    """
+    Reject implausible achieved-vs-asking percentages. Homedata averages
+    across local agents and returned 119.2% on a live report - a figure a
+    reviewer flagged as unevidenced and impossible to assess. Outside
+    70-110% it is far more likely bad data than a real market signal.
+    """
+    if value is None:
+        return None
+    try:
+        pct = float(value)
+    except (TypeError, ValueError):
+        return None
+    if 70.0 <= pct <= 110.0:
+        return pct
+    logger.warning("asking_price_pct_rejected", value=pct)
+    return None
+
+
 def _weeks_from_days(days: float | None) -> str:
     if days is None:
         return "—"
@@ -677,17 +708,20 @@ def build_context(
 
         # ── Market ────────────────────────────────────────────
         "market": {
-            "area":             mkt.get("area", address.city or "Local area"),
+            # Nominatim returned "Darlaston" for a WS1 postcode that is in
+            # Walsall - a reviewer flagged it. methodology["post_town"] is
+            # the EPC register's own town field and is authoritative.
+            "area":             mkt.get("area", methodology.get("post_town") or address.city or "Local area"),
             # None (not a hardcoded 96) when no real agent data was captured
             # - the template hides the stat entirely rather than showing a
             # number we invented, which would be indefensible to an agent.
-            "asking_price_pct": mkt.get("asking_price_pct", methodology.get("avg_sale_percent")),
+            "asking_price_pct": mkt.get("asking_price_pct", _sane_asking_pct(methodology.get("avg_sale_percent"))),
             "weeks_on_market":  mkt.get("weeks_on_market", _weeks_from_days(methodology.get("avg_time_on_market_days"))),
             "demand_rating":    mkt.get("demand_rating", methodology.get("market_demand_rating") or "—"),
             "search_area":      mkt.get("search_area", address.postcode.split()[0]),
-            "postcode_sector":  mkt.get("postcode_sector", " ".join(address.postcode.split()[:2])[:6]),
+            "postcode_sector":  mkt.get("postcode_sector", address.postcode),
             "bedrooms":         property_.bedrooms or 2,
-            "prop_type_plural": "flats/maisonettes",
+            "prop_type_plural": _type_plural(property_.property_type),
         },
 
         # ── Comparables ───────────────────────────────────────

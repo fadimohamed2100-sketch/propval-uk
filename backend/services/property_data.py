@@ -314,6 +314,7 @@ class PropertyDataService:
             # receptions = habitable_rooms - confirmed bedrooms.
             "habitable_rooms": int(habitable) if habitable else None,
             "construction_age_band": _pick("construction_age_band", "construction-age-band", "constructionAgeBand"),
+            "post_town": _pick("post_town", "postTown", "posttown"),
         }
         logger.info(
             "epc_matched", postcode=postcode,
