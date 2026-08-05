@@ -304,8 +304,17 @@ class ValuationService:
         ]
 
         # Get PropertyData direct valuation (primary)
+        # Resolve the EPC REGISTER record here, before the AVM call.
+        # It was previously fetched much further down, so construction_date
+        # was always None at this point and PropertyData's AVM could never
+        # run. Homedata-sourced EPC data carries no construction age band.
+        epc_for_enrichment = epc if epc_is_register_source else None
+        if not epc_for_enrichment or not epc_for_enrichment.get("construction_age_band"):
+            epc_for_enrichment = await self._property_data.get_epc_data(
+                address.postcode, line_1=unit_identifier or address.line_1, uprn=uprn
+            ) or epc_for_enrichment
         pd_construction = self._property_data._pd_construction_date(
-            (epc or {}).get("construction_age_band")
+            (epc_for_enrichment or {}).get("construction_age_band")
         )
         pd_valuation_pence = await self._property_data.get_propertydata_valuation(
             address.postcode, pd_property_type,
@@ -491,9 +500,7 @@ class ValuationService:
         # directly if that was our enrichment source; otherwise (Homedata
         # matched via UPRN) make one extra lightweight EPC lookup just for
         # this — Homedata doesn't carry construction age band.
-        epc_for_enrichment = epc if epc_is_register_source else None
-        if not epc_for_enrichment:
-            epc_for_enrichment = await self._property_data.get_epc_data(address.postcode, line_1=address.line_1)
+        # Already resolved above (before the AVM call) - reuse, don't refetch.
         if epc_for_enrichment:
             if epc_for_enrichment.get("construction_age_band"):
                 methodology["construction_age_band"] = epc_for_enrichment["construction_age_band"]
