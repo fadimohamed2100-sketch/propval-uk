@@ -304,11 +304,15 @@ class ValuationService:
         ]
 
         # Get PropertyData direct valuation (primary)
-        pd_valuation = await self._property_data.get_propertydata_valuation(
+        pd_construction = self._property_data._pd_construction_date(
+            (epc or {}).get("construction_age_band")
+        )
+        pd_valuation_pence = await self._property_data.get_propertydata_valuation(
             address.postcode, pd_property_type,
             bedrooms=effective_bedrooms or property_.bedrooms,
             floor_area_m2=property_.floor_area_m2,
-            bathrooms=bathrooms, condition=condition, parking=parking, outdoor_space=outdoor_space
+            bathrooms=bathrooms, condition=condition, parking=parking,
+            outdoor_space=outdoor_space, construction_date=pd_construction,
         )
         # Property-specific rental AVM first (accounts for floor area,
         # type, bathrooms, finish, outdoor space). Falls back to the
@@ -342,6 +346,43 @@ class ValuationService:
             )
         except ValueError as exc:
             raise ValuationFailedError(str(exc))
+
+        # Blend in PropertyData's AVM. Our comparable engine values on local
+        # £/m2 alone, so it cannot price a DETACHED house in excellent order
+        # differently from the semis it sits among. PropertyData's model
+        # takes type, finish, parking and outdoor space as inputs.
+        #
+        # Deliberately a 50/50 blend rather than replacing our estimate:
+        # two independent models disagreeing usually means the truth is
+        # between them, and it stops either one's failure mode dominating.
+        # If they disagree by more than 40% one of them is likely wrong
+        # about the property, so we keep our comparable-based figure -
+        # it is the one we can evidence directly in the report.
+        blend_meta: dict = {}
+        if pd_valuation_pence and result.estimated_value > 0:
+            ratio = pd_valuation_pence / result.estimated_value
+            if 0.6 <= ratio <= 1.667:
+                blended = int((result.estimated_value + pd_valuation_pence) / 2)
+                logger.info(
+                    "valuation_blended",
+                    comparables_gbp=result.estimated_value / 100,
+                    propertydata_gbp=pd_valuation_pence / 100,
+                    blended_gbp=blended / 100,
+                )
+                spread = (result.range_high - result.range_low) / 2 / max(result.estimated_value, 1)
+                result.estimated_value = blended
+                result.range_low = int(blended * (1 - spread))
+                result.range_high = int(blended * (1 + spread))
+                blend_meta = {
+                    "propertydata_avm_pence": pd_valuation_pence,
+                    "method": "blended_comparables_and_propertydata_avm",
+                }
+            else:
+                logger.warning(
+                    "valuation_blend_rejected",
+                    comparables_gbp=result.estimated_value / 100,
+                    propertydata_gbp=pd_valuation_pence / 100, ratio=round(ratio, 2),
+                )
 
         # Apply the best available rental figure. RENT_SANITY: a gross
         # yield outside 1-15% almost always means a units mix-up (weekly
@@ -413,6 +454,7 @@ class ValuationService:
         # without the other (e.g. a real sold date with a missing price), and a
         # missing price shouldn't cause a perfectly real date to be discarded too.
         methodology = dict(result.methodology)
+        methodology.update(blend_meta)
         if bathrooms:
             methodology["subject_bathrooms"] = bathrooms
         if condition:

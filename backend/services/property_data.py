@@ -372,33 +372,84 @@ class PropertyDataService:
         return out
 
 
-    async def get_propertydata_valuation(self, postcode: str, property_type: str, bedrooms: int | None, floor_area_m2: float | None, bathrooms: int | None = None, condition: str | None = None, parking: str | None = None, outdoor_space: str | None = None) -> dict | None:
-        """Call PropertyData /valuation-sale endpoint."""
+    async def get_propertydata_valuation(
+        self, postcode: str, property_type: str, bedrooms: int | None,
+        floor_area_m2: float | None, bathrooms: int | None = None,
+        condition: str | None = None, parking: str | None = None,
+        outdoor_space: str | None = None, construction_date: str | None = None,
+    ) -> int | None:
+        """
+        PropertyData /valuation-sale - a professional AVM that prices in
+        property TYPE, finish quality, parking and outdoor space. Our own
+        comparable engine cannot: it values purely on local £/m2, so a
+        detached house in excellent order is priced like the semis around
+        it.
+
+        Returns the estimate in PENCE, or None to fall back.
+
+        Previously this was called and the result silently DISCARDED, and
+        it would have failed anyway: internal_area was sent in m2 (the API
+        wants sqft), construction_date was hardcoded "2000", and bedrooms
+        above 5 are rejected outright.
+        """
         if not settings.PROPERTYDATA_API_KEY:
             return None
+        if not floor_area_m2 or not construction_date:
+            logger.info(
+                "propertydata_valuation_skipped",
+                has_area=bool(floor_area_m2), has_construction_date=bool(construction_date),
+            )
+            return None
+        params = {
+            "key": settings.PROPERTYDATA_API_KEY,
+            "postcode": postcode,
+            # API expects SQUARE FEET - we were sending square metres,
+            # understating every property by a factor of ~10.8.
+            "internal_area": str(int(float(floor_area_m2) * 10.764)),
+            "property_type": property_type,
+            "bedrooms": str(bedrooms) if (bedrooms and bedrooms <= 5) else None,
+            "bathrooms": str(bathrooms) if (bathrooms and bathrooms <= 5) else None,
+            "finish_quality": condition or "average",
+            "outdoor_space": outdoor_space or "none",
+            "off_street_parking": "1" if parking else "0",
+            "construction_date": construction_date,
+        }
+        params = {k: v for k, v in params.items() if v is not None}
         try:
-            params = {
-                "key": settings.PROPERTYDATA_API_KEY,
-                "postcode": postcode,
-                "internal_area": str(int(floor_area_m2)) if floor_area_m2 else None,
-                "property_type": property_type,
-                "bedrooms": str(bedrooms) if bedrooms else None,
-                "bathrooms": str(bathrooms) if bathrooms else None,
-                "finish_quality": condition or "average",
-                "outdoor_space": outdoor_space or "none",
-                "parking": parking or "none",
-                "construction_date": "2000",
-            }
-            params = {k: v for k, v in params.items() if v is not None}
             async with httpx.AsyncClient(timeout=15.0) as client:
-                resp = await client.get("https://api.propertydata.co.uk/valuation-sale", params=params)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    if data.get("status") == "success":
-                        return data
+                resp = await client.get(
+                    "https://api.propertydata.co.uk/valuation-sale", params=params
+                )
+            logger.info(
+                "propertydata_valuation_response",
+                status=resp.status_code, body=resp.text[:300],
+            )
+            if resp.status_code != 200:
+                return None
+            body = resp.json()
+            if body.get("status") != "success":
+                return None
         except Exception as e:
-            logger.warning("propertydata_error", error=str(e))
-        return None
+            logger.warning("propertydata_valuation_error", error=str(e))
+            return None
+
+        data = body.get("data") or {}
+        raw = None
+        for key in ("estimate", "valuation", "result", "long_let"):
+            val = data.get(key)
+            if isinstance(val, dict):
+                val = val.get("estimate") or val.get("value") or val.get("average")
+            if val not in (None, ""):
+                raw = val
+                break
+        if raw is None:
+            logger.warning("propertydata_valuation_unparsed", keys=list(data)[:10])
+            return None
+        try:
+            return int(float(str(raw).replace("\u00a3", "").replace(",", "").strip()) * 100)
+        except (TypeError, ValueError):
+            logger.warning("propertydata_valuation_bad_value", raw=str(raw)[:50])
+            return None
 
     async def get_propertydata_sold_prices(self, postcode: str, property_type: str, bedrooms: int | None = None, tenure: str | None = None) -> list[dict]:
         """Call PropertyData /sold-prices endpoint."""
