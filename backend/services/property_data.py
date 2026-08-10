@@ -88,6 +88,12 @@ def _lr_match_score(
 
 
 class PropertyDataService:
+    # Set when PropertyData returns an account-level failure (403 / X05:
+    # cancelled account or declined card). Retrying with different filters
+    # cannot help - the credential itself is rejected - so we stop calling
+    # for the rest of the request instead of burning five identical calls.
+    _pd_account_failed: bool = False
+
     def __init__(self) -> None:
         self._lr_client = httpx.AsyncClient(
             base_url=settings.LAND_REGISTRY_BASE_URL,
@@ -464,7 +470,7 @@ class PropertyDataService:
 
     async def get_propertydata_sold_prices(self, postcode: str, property_type: str, bedrooms: int | None = None, tenure: str | None = None) -> list[dict]:
         """Call PropertyData /sold-prices endpoint."""
-        if not settings.PROPERTYDATA_API_KEY:
+        if not settings.PROPERTYDATA_API_KEY or self._pd_account_failed:
             return []
         try:
             params = {
@@ -486,6 +492,13 @@ class PropertyDataService:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.get("https://api.propertydata.co.uk/sold-prices", params=params)
                 logger.info("propertydata_sold_prices_response", status=resp.status_code, body=resp.text[:200])
+                if resp.status_code == 403 or '"X05"' in resp.text:
+                    self._pd_account_failed = True
+                    logger.error(
+                        "propertydata_account_failed",
+                        detail="Account cancelled or card declined - check billing",
+                    )
+                    return []
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get("status") == "success":

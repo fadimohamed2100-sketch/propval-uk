@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from core.exceptions import ValuationFailedError, ValuationNotFoundError
+from core.exceptions import ValuationFailedError, ValuationNotFoundError, ExternalAPIError
 from core.logging import get_logger
 from models.orm import Address, Comparable, Property, ValuationReport
 from pathlib import Path
@@ -248,6 +248,15 @@ class ValuationService:
                 if len(raw_sales) >= ValuationEngine.MIN_COMPS + 1:
                     break
         used_propertydata_sales = bool(raw_sales)
+        if not raw_sales and getattr(self._property_data, "_pd_account_failed", False):
+            # Distinguish a billing failure from a genuine data gap. Telling
+            # the user "0 comparables found" when the real cause is a
+            # declined card sends them hunting for the wrong problem.
+            raise ExternalAPIError(
+                "PropertyData",
+                "Comparable sales are temporarily unavailable due to a data "
+                "provider account issue. Please contact support.",
+            )
         if not raw_sales:
             from sqlalchemy import text
             # Restrict the seed-data fallback to the subject's postcode AREA
