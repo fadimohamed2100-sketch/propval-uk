@@ -373,6 +373,67 @@ def _format_hpi_label(ref_month: str) -> str:
         return ref_month
 
 
+async def fetch_hpi_index(postcode: str) -> dict[str, float] | None:
+    """
+    Regional UK House Price Index series as {"YYYY-MM": averagePrice}, used
+    to index historic comparable sales to present-day money.
+
+    Comparables are often 1-3 years old and were previously treated as if
+    they had sold today, which biases every estimate downward in a rising
+    market. Free HM Land Registry data - the same source as the report chart.
+    """
+    region = _postcode_to_hpi_region(postcode)
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"https://landregistry.data.gov.uk/data/ukhpi/region/{region}.json",
+                params={
+                    "_pageSize": 72,
+                    "_view": "basic",
+                    "_properties": "housePriceIndex,refMonth,averagePrice",
+                },
+                headers={"Accept": "application/json"},
+            )
+            if resp.status_code != 200:
+                return None
+            body = resp.json()
+    except Exception as e:
+        logger.warning("hpi_index_fetch_error", region=region, error=str(e))
+        return None
+
+    items = (body.get("result") or {}).get("items") or body.get("items") or []
+    series = {
+        str(it["refMonth"]): float(it["averagePrice"])
+        for it in items
+        if isinstance(it, dict) and it.get("averagePrice") and it.get("refMonth")
+    }
+    return series or None
+
+
+def hpi_uplift(series: dict[str, float] | None, sale_date) -> float:
+    """
+    Factor to bring a sale price into present-day money. Returns 1.0 when
+    the index is unavailable or the move looks implausible, so a data
+    problem can never distort a valuation.
+    """
+    if not series or not sale_date:
+        return 1.0
+    months = sorted(series)
+    latest = series[months[-1]]
+    key = f"{sale_date.year:04d}-{sale_date.month:02d}"
+    then = series.get(key)
+    if then is None:
+        earlier = [m for m in months if m <= key]
+        if not earlier:
+            return 1.0
+        then = series[earlier[-1]]
+    if then <= 0:
+        return 1.0
+    factor = latest / then
+    # Cap: beyond this a bad index reading is likelier than a real move.
+    return factor if 0.8 <= factor <= 1.5 else 1.0
+
+
 async def fetch_real_price_chart(postcode: str, estimate_gbp: float) -> ChartGeometry | None:
     """
     Fetch real regional house-price-trend data from HM Land Registry's

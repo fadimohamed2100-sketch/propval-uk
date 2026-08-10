@@ -28,7 +28,9 @@ from models.orm import Address, Comparable, Property, ValuationReport
 from pathlib import Path
 
 from services.geocoder import GeocoderService
-from services.pdf_playwright import PlaywrightPDFService, data_coverage_note
+from services.pdf_playwright import (
+    PlaywrightPDFService, data_coverage_note, fetch_hpi_index, hpi_uplift,
+)
 from services.property_data import PropertyDataService
 from services.valuation_engine import ComparableInput, ValuationEngine
 
@@ -293,6 +295,24 @@ class ValuationService:
             own_sale_price_pence = lr_own_sale["price_pence"]
             own_sale_date_iso = lr_own_sale["date"]
 
+        # Deduplicate by address, keeping only each property's MOST RECENT
+        # sale. Land Registry lists every historic transaction, so one house
+        # can appear several times - 6 Teesdale Road appeared at both
+        # £105,000 (Feb 2024) and £150,000 (Aug 2024), double-counting it and
+        # dragging the median £/m2 down with a stale price.
+        _seen: dict[str, dict] = {}
+        for s in raw_sales:
+            key = re.sub(r"[^a-z0-9]", "", (s.get("address") or "").lower())
+            prev = _seen.get(key)
+            if prev is None or str(s.get("transaction_date") or "") > str(prev.get("transaction_date") or ""):
+                _seen[key] = s
+        if len(_seen) < len(raw_sales):
+            logger.info(
+                "comparables_deduplicated",
+                before=len(raw_sales), after=len(_seen),
+            )
+        raw_sales = list(_seen.values())
+
         # Real per-comparable floor areas from their own EPC certificates.
         # Previously every comparable was given the SUBJECT's floor area,
         # which made the engine's size ratio always exactly 1.0 - it could
@@ -307,6 +327,25 @@ class ValuationService:
             ])
         except Exception as e:
             logger.warning("comparable_floor_areas_failed", error=str(e))
+
+        # Index each comparable's price to present-day money using regional
+        # UK HPI. Comps here ranged from Dec 2023 to May 2025 while valuing
+        # in Aug 2026 - treating a 2023 price as current understates the
+        # subject in a rising market. Best-effort: falls back to 1.0.
+        hpi_series = await fetch_hpi_index(address.postcode)
+        _indexed = 0
+        for s in raw_sales:
+            sd = s.get("transaction_date")
+            try:
+                sd_date = __import__("datetime").date.fromisoformat(str(sd)[:10]) if sd else None
+            except ValueError:
+                sd_date = None
+            factor = hpi_uplift(hpi_series, sd_date)
+            if factor != 1.0:
+                s["price_pence"] = int(s["price_pence"] * factor)
+                _indexed += 1
+        if _indexed:
+            logger.info("comparables_hpi_indexed", count=_indexed, total=len(raw_sales))
 
         comp_inputs = [
             ComparableInput(
