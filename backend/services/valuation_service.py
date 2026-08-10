@@ -211,7 +211,42 @@ class ValuationService:
         # Fetch comparables — PropertyData first, then seeded DB
         pd_type_map = {"flat": "flat", "terraced": "terraced", "semi_detached": "semi-detached", "detached": "detached", "other": "terraced"}
         pd_property_type = pd_type_map.get(property_.property_type or "other", "terraced")
-        raw_sales = await self._property_data.get_propertydata_sold_prices(address.postcode, pd_property_type, bedrooms=effective_bedrooms, tenure=tenure)
+        raw_sales = await self._property_data.get_propertydata_sold_prices(
+            address.postcode, pd_property_type,
+            bedrooms=effective_bedrooms, tenure=tenure,
+        )
+        # Filters can be too narrow for the local market and return nothing
+        # ("Only 0 comparables found" is a dead end for the user). Retry
+        # progressively looser rather than failing: bedrooms+tenure first,
+        # then property type too. A broader comparable set is always better
+        # than no valuation - the engine already scores similarity when
+        # ranking, so poorer matches get down-weighted rather than trusted.
+        if len(raw_sales) < ValuationEngine.MIN_COMPS + 1:
+            relaxed = await self._property_data.get_propertydata_sold_prices(
+                address.postcode, pd_property_type, bedrooms=None, tenure=None,
+            )
+            if len(relaxed) > len(raw_sales):
+                logger.info(
+                    "comparables_filters_relaxed", stage="bedrooms_tenure",
+                    before=len(raw_sales), after=len(relaxed),
+                )
+                raw_sales = relaxed
+        if len(raw_sales) < ValuationEngine.MIN_COMPS + 1:
+            for fallback_type in ("terraced", "semi-detached", "detached", "flat"):
+                if fallback_type == pd_property_type:
+                    continue
+                widest = await self._property_data.get_propertydata_sold_prices(
+                    address.postcode, fallback_type, bedrooms=None, tenure=None,
+                )
+                if len(widest) > len(raw_sales):
+                    logger.info(
+                        "comparables_filters_relaxed", stage="property_type",
+                        used_type=fallback_type,
+                        before=len(raw_sales), after=len(widest),
+                    )
+                    raw_sales = widest
+                if len(raw_sales) >= ValuationEngine.MIN_COMPS + 1:
+                    break
         used_propertydata_sales = bool(raw_sales)
         if not raw_sales:
             from sqlalchemy import text
