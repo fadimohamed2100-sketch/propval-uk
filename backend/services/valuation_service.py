@@ -339,6 +339,22 @@ class ValuationService:
             own_sale_price_pence = lr_own_sale["price_pence"]
             own_sale_date_iso = lr_own_sale["date"]
 
+        # Drop comparables from too far away. PropertyData widens its search
+        # radius when local sales are thin, which pulled Clapham (SW4) sales
+        # into a Brixton (SW2) valuation and inflated it - those are
+        # different markets, however close on a map. Only enforced while
+        # enough nearby sales remain, so a genuinely sparse area still gets
+        # a valuation rather than an error.
+        MAX_COMP_DISTANCE_M = 1200  # ~0.75 miles
+        near = [s for s in raw_sales if (s.get("distance_m") or 0) <= MAX_COMP_DISTANCE_M]
+        if len(near) >= ValuationEngine.MIN_COMPS + 1 and len(near) < len(raw_sales):
+            logger.info(
+                "comparables_distance_filtered",
+                before=len(raw_sales), after=len(near),
+                max_distance_m=MAX_COMP_DISTANCE_M,
+            )
+            raw_sales = near
+
         # Deduplicate by address, keeping only each property's MOST RECENT
         # sale. Land Registry lists every historic transaction, so one house
         # can appear several times - 6 Teesdale Road appeared at both
@@ -395,6 +411,14 @@ class ValuationService:
                 _indexed += 1
         if _indexed:
             logger.info("comparables_hpi_indexed", count=_indexed, total=len(raw_sales))
+        # Surface the size-scaling inputs: if comparables are much smaller
+        # than the subject, the size curve scales them UP, and that is the
+        # single biggest driver of the final figure.
+        logger.info(
+            "comparable_areas",
+            subject_m2=float(property_.floor_area_m2) if property_.floor_area_m2 else None,
+            comp_m2=[round(float(v), 1) for v in sorted(comp_areas.values())],
+        )
 
         comp_inputs = [
             ComparableInput(
