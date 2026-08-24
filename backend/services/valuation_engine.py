@@ -85,6 +85,10 @@ class ValuationEngine:
     """
 
     MAX_COMP_AGE_YEARS = 3
+    # Exponent for size adjustment: value ~ area ** 0.85. Below 1.0 because
+    # larger properties trade at a lower rate per square metre.
+    SIZE_EXPONENT: float = 0.85
+
     MIN_COMPS = 3
     CONFIDENCE_FLOOR = 0.40
 
@@ -285,20 +289,40 @@ class ValuationEngine:
         if len(usable) < ValuationEngine.MIN_COMPS or not subject_floor_area_m2:
             return None
 
-        by_ppsm = sorted(usable, key=lambda x: x[0].sale_price / float(x[0].floor_area_m2))
-        total_weight = sum(s for _, s in by_ppsm)
+        # Value scales SUB-LINEARLY with floor area. Straight £/m2 x area
+        # assumes a 200 m2 house is worth exactly twice a 100 m2 one, which
+        # overprices large properties: on a Brixton semi it produced
+        # £782/sqft where the comparables themselves supported ~£724/sqft.
+        # Smaller homes trade at a higher rate per square metre, so scaling
+        # their rate up to a bigger subject systematically overshoots.
+        #
+        # Each comparable is instead projected onto the subject using a
+        # power curve, then the weighted median of those projections is
+        # taken. SIZE_EXPONENT of 0.85 is the standard valuation
+        # convention: doubling floor area adds ~80% to value, not 100%.
+        subject_area = float(subject_floor_area_m2)
+        projected: list[tuple[int, float]] = []
+        for comp, score in usable:
+            comp_area = float(comp.floor_area_m2)
+            ratio = subject_area / comp_area
+            # Clamp: beyond a 3x size difference the comparable is not
+            # really comparable and the curve stops being trustworthy.
+            ratio = max(0.33, min(ratio, 3.0))
+            implied = comp.sale_price * (ratio ** ValuationEngine.SIZE_EXPONENT)
+            projected.append((int(implied), score))
+
+        projected.sort(key=lambda x: x[0])
+        total_weight = sum(s for _, s in projected)
         if total_weight <= 0:
-            mid = by_ppsm[len(by_ppsm) // 2][0]
-            ppsm = mid.sale_price / float(mid.floor_area_m2)
-        else:
-            cumulative = 0.0
-            ppsm = by_ppsm[-1][0].sale_price / float(by_ppsm[-1][0].floor_area_m2)
-            for comp, score in by_ppsm:
-                cumulative += score / total_weight
-                if cumulative >= 0.5:
-                    ppsm = comp.sale_price / float(comp.floor_area_m2)
-                    break
-        return int(ppsm * float(subject_floor_area_m2))
+            return projected[len(projected) // 2][0]
+        cumulative = 0.0
+        chosen = projected[-1][0]
+        for value, score in projected:
+            cumulative += score / total_weight
+            if cumulative >= 0.5:
+                chosen = value
+                break
+        return chosen
 
     @staticmethod
     def _weighted_median(

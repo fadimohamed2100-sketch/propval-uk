@@ -93,6 +93,8 @@ class PropertyDataService:
     # cannot help - the credential itself is rejected - so we stop calling
     # for the rest of the request instead of burning five identical calls.
     _pd_account_failed: bool = False
+    # Populated by get_epc_floor_areas alongside the areas it returns.
+    _last_habitable_rooms: dict = {}
 
     def __init__(self) -> None:
         self._lr_client = httpx.AsyncClient(
@@ -384,6 +386,17 @@ class PropertyDataService:
             area = self._extract_floor_area(cert)
             if area:
                 out[key] = area
+                # Habitable rooms from the same certificate - free, and the
+                # only independent check we have on a comparable's size
+                # profile. Not a bedroom count (it includes receptions), so
+                # used only to flag comparables that look materially
+                # different from the subject.
+                rooms = cert.get("habitable_room_count") or cert.get("habitable-room-count")
+                if rooms:
+                    try:
+                        self._last_habitable_rooms[key] = int(rooms)
+                    except (TypeError, ValueError):
+                        pass
 
         logger.info("epc_floor_areas", requested=len(targets), matched=len(out))
         return out
@@ -554,6 +567,15 @@ class PropertyDataService:
                                 "source": "propertydata",
                                 "distance_m": int(float(str(t.get("distance", 0))) * 1609),
                                 "property_type": t.get("type", "").replace("_house", "").replace("_", "-"),
+                                # Bedroom count per sale, when supplied. Key
+                                # name varies, so try the known variants -
+                                # previously discarded, leaving comparables
+                                # labelled "3 bed" purely because the QUERY
+                                # asked for 3, with nothing verifying it.
+                                "bedrooms": (
+                                    t.get("bedrooms") or t.get("beds")
+                                    or t.get("bedroom_count")
+                                ),
                                 "source_url": t.get("url", ""),
                             }
                             for t in filtered if t.get("price")
