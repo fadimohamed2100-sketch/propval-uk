@@ -385,8 +385,13 @@ class ValuationService:
             except ValueError:
                 sd_date = None
             factor = hpi_uplift(hpi_series, sd_date)
+            # Keep the ACTUAL sale price intact - it is Land Registry fact and
+            # is displayed in the report. Store the indexed figure separately
+            # for the engine only. Overwriting it made the report show
+            # adjusted prices (e.g. £841,300) as though they were real sales,
+            # which would not reconcile against Land Registry.
+            s["indexed_price_pence"] = int(s["price_pence"] * factor)
             if factor != 1.0:
-                s["price_pence"] = int(s["price_pence"] * factor)
                 _indexed += 1
         if _indexed:
             logger.info("comparables_hpi_indexed", count=_indexed, total=len(raw_sales))
@@ -395,7 +400,7 @@ class ValuationService:
             ComparableInput(
                 address=s["address"],
                 postcode=s["postcode"],
-                sale_price=s["price_pence"],
+                sale_price=s.get("indexed_price_pence") or s["price_pence"],
                 sale_date=__import__("datetime").date.fromisoformat(str(s["transaction_date"])[:10]) if s["transaction_date"] else None,
                 property_type=s.get("property_type") or property_.property_type,
                 bedrooms=property_.bedrooms,
@@ -698,9 +703,20 @@ class ValuationService:
         self._db.add(report)
         await self._db.flush()
 
-        # Persist Comparables
+        # Persist Comparables. The engine works in HPI-INDEXED prices, but
+        # what we store and display must be the ACTUAL Land Registry sale
+        # price, so an agent can reconcile the report against public record.
+        actual_price_by_address = {
+            (s.get("address") or "").strip().lower(): s["price_pence"]
+            for s in raw_sales if s.get("price_pence")
+        }
         from datetime import date
         for comp_dict in result.comparables_used:
+            actual = actual_price_by_address.get(
+                (comp_dict.get("address") or "").strip().lower()
+            )
+            if actual:
+                comp_dict["sale_price"] = actual
             if comp_dict.get("sale_date") and isinstance(comp_dict["sale_date"], str):
                 comp_dict["sale_date"] = date.fromisoformat(comp_dict["sale_date"][:10])
             comp = Comparable(
