@@ -87,7 +87,13 @@ class ValuationEngine:
     MAX_COMP_AGE_YEARS = 3
     # Exponent for size adjustment: value ~ area ** 0.85. Below 1.0 because
     # larger properties trade at a lower rate per square metre.
-    SIZE_EXPONENT: float = 0.85
+    SIZE_EXPONENT: float = 0.60
+    # No size adjustment inside +/-5% of the subject's area. On Archbishops
+    # Place, two semis 75 sqft apart sold GBP 5,000 apart - implied elasticity
+    # ~0.09. Scaling across small area gaps manufactures value that the
+    # market did not pay. Applied in log space so the curve stays continuous
+    # at the band edge rather than jumping ~3%.
+    SIZE_DEADBAND: float = 0.05
 
     MIN_COMPS = 3
     CONFIDENCE_FLOOR = 0.40
@@ -251,9 +257,9 @@ class ValuationEngine:
             # Recency bonus - less weight than proximity
             age_days = (date.today() - sale_date).days
             recency = max(0, 1 - age_days / (365 * self.MAX_COMP_AGE_YEARS))
-            score += 0.15 * recency
-            recency = max(0, 1 - age_days / (365 * self.MAX_COMP_AGE_YEARS))
-            score += 0.2 * recency
+            # Was applied twice (0.15 then 0.20) via a copy-paste duplication,
+            # so the effective weight was 0.35 while the code read as 0.15.
+            score += 0.35 * recency
 
             scored.append((c, max(score, 0.01)))
 
@@ -264,6 +270,25 @@ class ValuationEngine:
     # ------------------------------------------------------------------
     # Weighted median
     # ------------------------------------------------------------------
+    @staticmethod
+    def _size_factor(ratio: float) -> float:
+        """
+        Sub-linear size scaling with a deadband, computed in log space.
+
+        Only the portion of the size difference beyond SIZE_DEADBAND is
+        scaled, so a comparable within the band gets exactly 1.0 and there
+        is no discontinuity for comparables sitting either side of the edge.
+        """
+        if ratio <= 0:
+            return 1.0
+        log_ratio = math.log(ratio)
+        band = math.log(1.0 + ValuationEngine.SIZE_DEADBAND)
+        excess = max(0.0, abs(log_ratio) - band)
+        if excess == 0.0:
+            return 1.0
+        return math.exp(ValuationEngine.SIZE_EXPONENT
+                        * math.copysign(excess, log_ratio))
+
     @staticmethod
     def _weighted_median_price_per_m2(
         scored: list[tuple[ComparableInput, float]],
@@ -304,12 +329,18 @@ class ValuationEngine:
         projected: list[tuple[int, float]] = []
         for comp, score in usable:
             comp_area = float(comp.floor_area_m2)
-            ratio = subject_area / comp_area
             # Clamp: beyond a 3x size difference the comparable is not
             # really comparable and the curve stops being trustworthy.
-            ratio = max(0.33, min(ratio, 3.0))
-            implied = comp.sale_price * (ratio ** ValuationEngine.SIZE_EXPONENT)
-            projected.append((int(implied), score))
+            ratio = max(0.33, min(subject_area / comp_area, 3.0))
+            factor = ValuationEngine._size_factor(ratio)
+            implied = comp.sale_price * factor
+            # A comparable needing a large size correction is weaker evidence
+            # than one needing none. Without this, the size-match bonus (max
+            # 0.3) loses to the proximity bonus (0.8), so a same-street comp
+            # of identical floor area only beat a 7%-off comp by ~1.8% - close
+            # enough to a tie that the median landed on the wrong one.
+            adj_weight = 1.0 / (1.0 + 3.0 * abs(factor - 1.0))
+            projected.append((int(implied), score * adj_weight))
 
         projected.sort(key=lambda x: x[0])
         total_weight = sum(s for _, s in projected)
@@ -366,7 +397,11 @@ class ValuationEngine:
 
         # Average similarity score component
         avg_similarity = statistics.mean(s for _, s in scored) if scored else 0
-        similarity_score = min(1.0, avg_similarity / 1.5)
+        # Scores run ~1.0 (base) to ~2.85 (all bonuses). Dividing by 1.5
+        # saturated this at 1.0 for every valuation, making 25% of the
+        # confidence figure a hardcoded constant. Normalise on the actual
+        # attainable range instead.
+        similarity_score = min(1.0, max(0.0, (avg_similarity - 1.0) / 1.85))
 
         raw = (size_score * 0.4) + (dispersion_score * 0.35) + (similarity_score * 0.25)
         return round(max(self.CONFIDENCE_FLOOR, min(0.97, raw)), 3)

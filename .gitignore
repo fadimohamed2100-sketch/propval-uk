@@ -7,3 +7,7 @@ __pycache__/
 venv/
 .venv/
 backend/.env
+*.bak
+patch_engine.py
+valuation_core.py
+venv/

@@ -427,7 +427,11 @@ class ValuationService:
                 sale_price=s.get("indexed_price_pence") or s["price_pence"],
                 sale_date=__import__("datetime").date.fromisoformat(str(s["transaction_date"])[:10]) if s["transaction_date"] else None,
                 property_type=s.get("property_type") or property_.property_type,
-                bedrooms=property_.bedrooms,
+                # Was property_.bedrooms - every comparable inherited the
+                # SUBJECT's bedroom count, so bed_diff in _score_comps was
+                # always 0 and the bedroom penalty never fired. None is
+                # correct when genuinely unknown: the scorer skips it.
+                bedrooms=s.get("bedrooms"),
                 # None (not the subject's area) when unknown - a wrong area
                 # is worse than no area, since it silently skews scoring.
                 floor_area_m2=comp_areas.get(str(i)),
