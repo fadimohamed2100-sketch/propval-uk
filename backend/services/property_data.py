@@ -492,14 +492,15 @@ class PropertyDataService:
                 "max_age": 48,
                 "points": 100,
             }
-            # PropertyData rejects bedrooms > 5 outright ("Invalid filter:
-            # bedrooms", HTTP 422) which returned ZERO comparables and
-            # failed the whole valuation. Omit the filter for larger homes
-            # rather than lose every comparable.
-            if bedrooms and bedrooms <= 5:
-                params["bedrooms"] = bedrooms
-            elif bedrooms:
-                logger.info("propertydata_bedrooms_filter_omitted", bedrooms=bedrooms)
+            # No bedrooms filter. PropertyData can only apply it to sales
+            # whose bedroom count it knows (mostly from listings), so it
+            # silently dropped recent same-street sales - a 16 Henley Road
+            # valuation missed 24 and 33 Henley Road (same postcode, 2026)
+            # and used neighbouring streets instead. Size is handled by
+            # each comparable's EPC floor area in the engine, which is a
+            # better measure than bedroom count anyway.
+            if bedrooms:
+                logger.info("propertydata_bedrooms_filter_not_applied", bedrooms=bedrooms)
             if tenure:
                 params["tenure"] = tenure
             async with httpx.AsyncClient(timeout=15.0) as client:
@@ -558,6 +559,21 @@ class PropertyDataService:
                                 filtered = no_new_builds
                         else:
                             filtered = no_new_builds
+                        # Record what was actually returned (nearest first),
+                        # so a missing same-street sale is visible in logs.
+                        def _dist(t):
+                            try:
+                                return float(str(t.get("distance", 999)))
+                            except (TypeError, ValueError):
+                                return 999.0
+                        logger.info(
+                            "propertydata_sold_prices_returned",
+                            postcode=postcode, raw=len(raw), kept=len(filtered),
+                            nearest=[
+                                f"{t.get('address', '')[:40]} | {t.get('date', '')[:10]} | {t.get('price')}"
+                                for t in sorted(filtered, key=_dist)[:12]
+                            ],
+                        )
                         return [
                             {
                                 "address": t.get("address", ""),

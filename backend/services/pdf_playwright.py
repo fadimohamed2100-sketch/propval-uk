@@ -536,7 +536,19 @@ async def _fetch_street_view_photo(location: str, size: str = "216x148") -> str 
                 params={"location": location, "key": settings.GOOGLE_MAPS_API_KEY},
             )
             meta_body = meta.json()
-            if meta_body.get("status") != "OK":
+            status = meta_body.get("status")
+            if status != "OK":
+                # ZERO_RESULTS / NOT_FOUND = genuinely no imagery there.
+                # Anything else (REQUEST_DENIED, OVER_QUERY_LIMIT...) is an
+                # account/key problem - e.g. Google billing lapsed - and was
+                # previously silent, so every photo just became "No photo".
+                if status in ("ZERO_RESULTS", "NOT_FOUND"):
+                    logger.info("street_view_no_imagery", location=location, status=status)
+                else:
+                    logger.warning(
+                        "street_view_denied", status=status,
+                        error=str(meta_body.get("error_message", ""))[:200],
+                    )
                 return None
 
             img_resp = await client.get(
@@ -549,6 +561,8 @@ async def _fetch_street_view_photo(location: str, size: str = "216x148") -> str 
                 },
             )
             if img_resp.status_code != 200:
+                logger.warning("street_view_image_non_200", status=img_resp.status_code,
+                               body=img_resp.text[:200])
                 return None
             encoded = base64.b64encode(img_resp.content).decode("ascii")
             return f"data:image/jpeg;base64,{encoded}"
