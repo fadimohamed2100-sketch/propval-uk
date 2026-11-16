@@ -918,23 +918,43 @@ class PropertyDataService:
         or any error - best-effort, never blocks the valuation.
         """
         if not postcode or not line_1:
+            logger.info("land_registry_own_sale_skipped", postcode=postcode, line_1=line_1)
             return None
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(
-                    "https://landregistry.data.gov.uk/data/ppi/transaction-record.json",
-                    params={
-                        "propertyAddress.postcode": postcode,
-                        "_pageSize": 100,
-                        "_properties": "pricePaid,transactionDate,propertyAddress.paon,propertyAddress.saon,propertyAddress.street,propertyAddress.postcode,propertyAddress.town",
-                    },
-                    headers={"Accept": "application/json"},
+        # Previously a non-200 returned None silently, so a failed lookup
+        # left "Last sale" showing a date with no price and nothing in the
+        # logs to say why. Log every failure and retry once - the endpoint
+        # is a free public service that intermittently errors or throttles.
+        body = None
+        for attempt in (1, 2):
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    resp = await client.get(
+                        "https://landregistry.data.gov.uk/data/ppi/transaction-record.json",
+                        params={
+                            "propertyAddress.postcode": postcode.strip().upper(),
+                            "_pageSize": 100,
+                            "_properties": "pricePaid,transactionDate,propertyAddress.paon,propertyAddress.saon,propertyAddress.street,propertyAddress.postcode,propertyAddress.town",
+                        },
+                        headers={
+                            "Accept": "application/json",
+                            "User-Agent": "PropValue/1.0 (+https://www.propvalue.co.uk)",
+                        },
+                    )
+                if resp.status_code == 200:
+                    body = resp.json()
+                    break
+                logger.warning(
+                    "land_registry_own_sale_non_200", postcode=postcode,
+                    status=resp.status_code, attempt=attempt, body=resp.text[:200],
                 )
-                if resp.status_code != 200:
-                    return None
-                body = resp.json()
-        except Exception as e:
-            logger.warning("land_registry_fetch_error", postcode=postcode, error=str(e))
+            except Exception as e:
+                logger.warning(
+                    "land_registry_fetch_error", postcode=postcode, attempt=attempt,
+                    error=f"{type(e).__name__}: {e}",
+                )
+            if attempt == 1:
+                await asyncio.sleep(1.5)
+        if body is None:
             return None
 
         items = (body.get("result") or {}).get("items") or body.get("items") or []

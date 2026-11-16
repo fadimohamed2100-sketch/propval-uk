@@ -734,17 +734,38 @@ class ValuationService:
         # Persist Comparables. The engine works in HPI-INDEXED prices, but
         # what we store and display must be the ACTUAL Land Registry sale
         # price, so an agent can reconcile the report against public record.
-        actual_price_by_address = {
-            (s.get("address") or "").strip().lower(): s["price_pence"]
-            for s in raw_sales if s.get("price_pence")
-        }
+        # The engine emits the address under "address_snapshot" (not
+        # "address"); looking up the wrong key meant this never matched and
+        # every report showed HPI-indexed prices as "Last sold price".
+        # Key on address + sale date so a house sold twice in the window
+        # gets the right price for the right sale.
+        def _addr_key(a) -> str:
+            return " ".join(str(a or "").lower().split())
+
+        actual_price_by_sale: dict[tuple[str, str], int] = {}
+        actual_price_by_address: dict[str, int] = {}
+        for s in raw_sales:
+            if not s.get("price_pence"):
+                continue
+            k = _addr_key(s.get("address"))
+            actual_price_by_sale[(k, str(s.get("transaction_date") or "")[:10])] = s["price_pence"]
+            actual_price_by_address.setdefault(k, s["price_pence"])
         from datetime import date
+        unmatched = 0
         for comp_dict in result.comparables_used:
-            actual = actual_price_by_address.get(
-                (comp_dict.get("address") or "").strip().lower()
-            )
+            k = _addr_key(comp_dict.get("address_snapshot") or comp_dict.get("address"))
+            d = str(comp_dict.get("sale_date") or "")[:10]
+            actual = actual_price_by_sale.get((k, d)) or actual_price_by_address.get(k)
             if actual:
                 comp_dict["sale_price"] = actual
+                area = comp_dict.get("floor_area_m2")
+                if area:
+                    comp_dict["price_per_m2"] = int(actual / float(area))
+            else:
+                unmatched += 1
+        if unmatched:
+            logger.warning("comparable_actual_price_unmatched", count=unmatched,
+                           total=len(result.comparables_used))
             if comp_dict.get("sale_date") and isinstance(comp_dict["sale_date"], str):
                 comp_dict["sale_date"] = date.fromisoformat(comp_dict["sale_date"][:10])
             comp = Comparable(

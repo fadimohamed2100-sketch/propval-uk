@@ -54,6 +54,13 @@ class ChartGeometry:
     x_labels:         list[tuple[float, str]]   # (svg_x, label)
     grid_lines:       list[float]               # svg_y for each horizontal gridline
     viewbox:          str = "0 0 250 140"
+    # Set only for the real UK HPI chart. The grey line is the regional
+    # all-property average, so the legend must say that - it previously
+    # claimed to be "3 bedroom terraced houses in <postcode>".
+    is_real:          bool = False
+    region_label:     str = ""
+    pct_change:       float | None = None       # grey line, first → last point
+    latest_label:     str = ""
 
 
 def compute_chart(
@@ -493,7 +500,18 @@ async def fetch_real_price_chart(postcode: str, estimate_gbp: float) -> ChartGeo
     y_max = (int(raw_max / step) + 1) * step
     y_min = max(0, int(raw_min / step) * step)
 
-    return compute_chart(subject_prices_k, avg_prices_k, labels, y_min=y_min, y_max=y_max, step=step)
+    geom = compute_chart(subject_prices_k, avg_prices_k, labels, y_min=y_min, y_max=y_max, step=step)
+    geom.is_real = True
+    geom.region_label = _hpi_region_label(region)
+    geom.pct_change = round((avg_prices_k[-1] / avg_prices_k[0] - 1) * 100, 1) if avg_prices_k[0] else None
+    geom.latest_label = labels[-1]
+    return geom
+
+
+def _hpi_region_label(slug: str) -> str:
+    """'london' -> 'London', 'england-and-wales' -> 'England and Wales'."""
+    words = slug.replace("-", " ").split()
+    return " ".join(w if w in ("and", "of") else w.capitalize() for w in words) or "the region"
 
 
 async def _fetch_street_view_photo(location: str, size: str = "216x148") -> str | None:
