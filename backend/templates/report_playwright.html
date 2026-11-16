@@ -558,12 +558,14 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
             <text x="43" y="{{ '%.2f' % (y + 2.5) }}" text-anchor="end"
                   font-size="6" fill="#888" font-family="Inter, sans-serif">{{ label }}</text>
             {% endfor %}
-            {# Area average line (gray) #}
+            {# Area average line (gray) - real regional index only #}
+            {% if chart.is_real %}
             <polyline points="{{ chart.avg_polyline }}"
                       fill="none" stroke="#9CA3AF" stroke-width="1.3" stroke-linejoin="round"/>
             {% for x, y in chart.avg_dots %}
             <circle cx="{{ '%.2f' % x }}" cy="{{ '%.2f' % y }}" r="2.2" fill="#9CA3AF"/>
             {% endfor %}
+            {% endif %}
             {# Subject property line (dark purple) #}
             <polyline points="{{ chart.subject_polyline }}"
                       fill="none" stroke="#2B1649" stroke-width="1.3" stroke-linejoin="round"/>
@@ -578,19 +580,30 @@ html, body { font-family: 'Inter', system-ui, sans-serif; background: #D4D0CC; f
           </svg>
 
           <div class="chart-legend">
+            {% if chart.is_real %}
             <div class="chart-legend-item">
               <div class="legend-line" style="background:#2B1649;"></div>
-              <span class="legend-text">Estimated value of this property</span>
+              <span class="legend-text">This property: today's estimate, traced back along the {{ chart.region_label }} trend</span>
             </div>
             <div class="chart-legend-item">
               <div class="legend-line" style="background:#9CA3AF;"></div>
-              <span class="legend-text">Average value of {{ market.bedrooms }} bedroom
-                {{ market.prop_type_plural }} in {{ market.postcode_sector }}</span>
+              <span class="legend-text">Average price of all homes in {{ chart.region_label }} (UK House Price Index)</span>
             </div>
+            {% else %}
+            <div class="chart-legend-item">
+              <div class="legend-line" style="background:#2B1649;"></div>
+              <span class="legend-text">Illustrative trend only: regional index data was unavailable for this report</span>
+            </div>
+            {% endif %}
           </div>
           <p class="chart-caption">
-            Price change over the last 5 years of {{ market.bedrooms }} bedroom
-            {{ market.prop_type_plural }} in <strong>{{ market.postcode_sector }}</strong>
+            {% if chart.is_real and chart.pct_change is not none %}
+            Average prices in <strong>{{ chart.region_label }}</strong> changed
+            <strong>{{ '%+.1f' % chart.pct_change }}%</strong> over the last 5 years
+            (UK House Price Index, to {{ chart.latest_label }}).
+            {% else %}
+            Regional price change unavailable.
+            {% endif %}
           </p>
         </div>
       </div>{# end insights-left #}
