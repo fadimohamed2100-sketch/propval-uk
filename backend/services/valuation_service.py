@@ -763,9 +763,6 @@ class ValuationService:
                     comp_dict["price_per_m2"] = int(actual / float(area))
             else:
                 unmatched += 1
-        if unmatched:
-            logger.warning("comparable_actual_price_unmatched", count=unmatched,
-                           total=len(result.comparables_used))
             if comp_dict.get("sale_date") and isinstance(comp_dict["sale_date"], str):
                 comp_dict["sale_date"] = date.fromisoformat(comp_dict["sale_date"][:10])
             comp = Comparable(
@@ -773,6 +770,9 @@ class ValuationService:
                 **comp_dict,
             )
             self._db.add(comp)
+        if unmatched:
+            logger.warning("comparable_actual_price_unmatched", count=unmatched,
+                           total=len(result.comparables_used))
 
         await self._db.flush()
 
